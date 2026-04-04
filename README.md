@@ -4,9 +4,9 @@ Pre-launch management dashboard voor Artazest acoustic panels.
 
 ## Stack
 - **Frontend**: React + Vite
-- **Auth**: Netlify Identity (gratis, max 5 users)
-- **Data**: Netlify Blobs via Netlify Functions
-- **Hosting**: Netlify
+- **Auth**: PIN-based login (Tein/Sam/Productie, PIN: 2026)
+- **Data**: localStorage (per browser)
+- **Hosting**: Vercel
 
 ## Lokaal draaien
 ```bash
@@ -14,12 +14,15 @@ npm install
 npm run dev
 ```
 
-## Deployen
+## Deployen naar Vercel
 1. Push naar GitHub
-2. Netlify → New site from Git → selecteer repo
-3. Build: `npm run build` / Publish: `dist`
-4. Identity activeren: Site settings → Identity → Enable
+2. Ga naar vercel.com → Import Git Repository
+3. Framework preset: Vite
+4. Deploy
 
-## Users
-Netlify → Identity → Invite users
-Admin: app_metadata `{"roles": ["admin"]}`
+## Modules
+- **Dashboard** — Launch countdown, metrics, voorraad alerts
+- **Taken** — Dagelijks/wekelijks/launch checklist, toewijzen
+- **Voorraad** — Panelen, verpakking, drukwerk, samples
+- **Content** — Pipeline view (idee → live), content kalender
+- **Artworks** — Design-to-live pipeline per artwork

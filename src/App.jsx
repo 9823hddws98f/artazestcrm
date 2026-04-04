@@ -11,22 +11,51 @@ import Artwork from './pages/Artwork'
 
 export default function App() {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loginName, setLoginName] = useState('')
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
+
   useEffect(() => {
-    auth.init(); seedData()
-    const u = auth.getUser(); if (u) setUser(u)
-    setLoading(false)
-    auth.onLogin(u => setUser(u)); auth.onLogout(() => setUser(null))
+    seedData()
+    const u = auth.getUser()
+    if (u) setUser(u)
   }, [])
-  if (loading) return null
-  if (!user) return (
-    <div className="login-page">
-      <div style={{textAlign:'center'}}><h1>Artazest</h1><p>Co-Pilot — Launch Control</p></div>
-      <button className="login-btn" onClick={() => auth.login()}>Inloggen</button>
-    </div>
-  )
+
+  const handleLogin = () => {
+    const u = auth.login(loginName, pin)
+    if (u) { setUser(u); setError('') }
+    else setError('Onjuiste PIN of naam')
+  }
+
+  const handleLogout = () => { auth.logout(); setUser(null) }
+
+  if (!user) {
+    return (
+      <div className="login-page">
+        <div style={{textAlign:'center'}}>
+          <h1>Artazest</h1>
+          <p>Co-Pilot — Launch Control</p>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:'0.75rem',width:'240px'}}>
+          <select className="form-select" value={loginName}
+            onChange={e=>setLoginName(e.target.value)}
+            style={{background:'rgba(255,255,255,0.1)',color:'#fff',border:'1px solid rgba(255,255,255,0.2)'}}>
+            <option value="">Kies je naam...</option>
+            {auth.getUsers().map(u=><option key={u.name} value={u.name}>{u.name}</option>)}
+          </select>
+          <input type="password" placeholder="PIN" value={pin}
+            onChange={e=>setPin(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&handleLogin()}
+            style={{padding:'0.6rem',borderRadius:'6px',border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',fontSize:'1rem',textAlign:'center',letterSpacing:'0.3em'}}/>
+          {error&&<div style={{color:'#f87171',fontSize:'0.8rem',textAlign:'center'}}>{error}</div>}
+          <button className="login-btn" onClick={handleLogin}>Inloggen</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <Layout user={user}>
+    <Layout user={user} onLogout={handleLogout}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/tasks" element={<Tasks user={user} />} />

@@ -1,31 +1,24 @@
-import netlifyIdentity from 'netlify-identity-widget';
-
-const IS_LOCAL = window.location.hostname === 'localhost';
+const TEAM_PIN = '2026'
+const USERS = [
+  { name: 'Tein', role: 'admin' },
+  { name: 'Sam', role: 'team' },
+  { name: 'Productie', role: 'team' },
+]
 
 export const auth = {
-  init() {
-    if (!IS_LOCAL) netlifyIdentity.init();
-  },
   getUser() {
-    if (IS_LOCAL) return { user_metadata: { full_name: 'Tein (dev)' }, email: 'dev@artazest.nl', role: 'admin' };
-    const user = netlifyIdentity.currentUser();
-    if (!user) return null;
-    return { ...user, role: user.app_metadata?.roles?.includes('admin') ? 'admin' : 'team' };
+    const stored = localStorage.getItem('artazest_user')
+    return stored ? JSON.parse(stored) : null
   },
-  login() {
-    if (IS_LOCAL) { window.location.reload(); return; }
-    netlifyIdentity.open('login');
+  login(name, pin) {
+    if (pin !== TEAM_PIN) return null
+    const user = USERS.find(u => u.name === name)
+    if (!user) return null
+    localStorage.setItem('artazest_user', JSON.stringify(user))
+    return user
   },
   logout() {
-    if (IS_LOCAL) return;
-    netlifyIdentity.logout();
+    localStorage.removeItem('artazest_user')
   },
-  onLogin(cb) {
-    if (IS_LOCAL) return;
-    netlifyIdentity.on('login', (user) => { netlifyIdentity.close(); cb(user); });
-  },
-  onLogout(cb) {
-    if (IS_LOCAL) return;
-    netlifyIdentity.on('logout', cb);
-  }
-};
+  getUsers() { return USERS },
+}
