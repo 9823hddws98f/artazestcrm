@@ -37,7 +37,7 @@ export default function Inventory() {
     setBatchForm({ qty: 0, date: '', note: '' }); setShowBatch(null); reload()
   }
   const del = async (id) => { await api.remove('inventory', id); setConfirmDel(null); reload() }
-  const current = items.filter(i => i.section === tab)
+  const current = items.filter(i => i.section === tab).sort((a, b) => a.quantity - b.quantity)
   const needsOrder = items.filter(i => i.minStock > 0 && i.quantity < i.minStock).length
   const sectionBad = (key) => items.filter(i => i.section === key && i.minStock > 0 && i.quantity < i.minStock).length > 0
   const sectionStats = (key) => {
@@ -106,7 +106,7 @@ export default function Inventory() {
             const used = (item.startStock || item.quantity) - item.quantity
             const isExpanded = expanded === item.id
             return (
-              <div key={item.id} style={{borderBottom:idx<current.length-1?'1px solid rgba(28,25,23,0.08)':'none'}}>
+              <div key={item.id} style={{borderBottom:idx<current.length-1?'1px solid rgba(28,25,23,0.08)':'none',borderLeft:isEmpty?'4px solid var(--danger)':isLow?'4px solid var(--accent)':'4px solid transparent',background:isEmpty?'#FEE2E210':isLow?'#FEF3C710':'transparent'}}>
                 <div style={{padding:'0.75rem 1.25rem'}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'0.5rem'}}>
                     {editing === item.id+'-name' ? (
