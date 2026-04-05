@@ -1,5 +1,5 @@
 const SEED_TASKS = [
-  { title: 'Shopify productpaginas compleet (alle kleuren)', category: 'Shopify', assignee: 'Tein', status: 'bezig', priority: 'high', dueDate: '2026-04-10', tags: ['launch'], subtasks: [
+  { title: 'Shopify productpaginas compleet (alle kleuren)', category: 'Shopify', assignee: 'Tein', status: 'gepland', plannedDate: '2026-04-06', priority: 'high', dueDate: '2026-04-10', tags: ['launch'], subtasks: [
     { id: 'st-1a', title: "Foto's uploaden per kleur", completed: true },
     { id: 'st-1b', title: 'Productteksten schrijven', completed: true },
     { id: 'st-1c', title: 'Prijzen & varianten instellen', completed: false },
@@ -12,7 +12,7 @@ const SEED_TASKS = [
     { id: 'st-2c', title: 'Creditcard testen', completed: false },
   ]},
   { title: 'Shipping zones NL, BE, DE configureren', category: 'Shopify', assignee: 'Tein', status: 'todo', priority: 'high', dueDate: '2026-04-11', tags: ['launch'], subtasks: [] },
-  { title: 'Meta Pixel installeren en testen', category: 'Ads', assignee: 'Tein', status: 'todo', priority: 'high', dueDate: '2026-04-12', tags: ['launch','ads'], subtasks: [
+  { title: 'Meta Pixel installeren en testen', category: 'Ads', assignee: 'Tein', status: 'gepland', plannedDate: '2026-04-07', priority: 'high', dueDate: '2026-04-12', tags: ['launch','ads'], subtasks: [
     { id: 'st-4a', title: 'Pixel-code in Shopify zetten', completed: false },
     { id: 'st-4b', title: 'Events Debugger controleren', completed: false },
     { id: 'st-4c', title: 'Test-aankoop pixel testen', completed: false },
@@ -26,7 +26,7 @@ const SEED_TASKS = [
     { id: 'st-7d', title: 'Post 4 — kleurenvergelijking', completed: false },
     { id: 'st-7e', title: 'Post 5 t/m 9 afmaken', completed: false },
   ]},
-  { title: 'Product fotografie selectie afronden', category: 'Content', assignee: 'Sam', status: 'bezig', priority: 'high', dueDate: '2026-04-08', tags: ['content'], subtasks: [
+  { title: 'Product fotografie selectie afronden', category: 'Content', assignee: 'Sam', status: 'gepland', plannedDate: '2026-04-06', priority: 'high', dueDate: '2026-04-08', tags: ['content'], subtasks: [
     { id: 'st-8a', title: 'Selectie White (9 stuks)', completed: true },
     { id: 'st-8b', title: 'Selectie Black (9 stuks)', completed: true },
     { id: 'st-8c', title: 'Selectie overige kleuren', completed: false },
@@ -56,7 +56,7 @@ const SEED_TASKS = [
     { id: 'st-17d', title: 'Pakket inpakken & verzenden', completed: false },
   ]},
   { title: 'Launch announcement email klaarzetten', category: 'Email', assignee: 'Sam', status: 'todo', priority: 'normal', dueDate: '2026-04-17', tags: ['launch','email'], subtasks: [] },
-  { title: 'Google Analytics 4 koppelen', category: 'Ads', assignee: 'Tein', status: 'todo', priority: 'normal', dueDate: '2026-04-10', tags: ['ads'], subtasks: [] },
+  { title: 'Google Analytics 4 koppelen', category: 'Ads', assignee: 'Tein', status: 'gepland', plannedDate: '2026-04-06', priority: 'normal', dueDate: '2026-04-10', tags: ['ads'], subtasks: [] },
   { title: 'Sample kits samenstellen (5 sets)', category: 'Productie', assignee: 'Productie', status: 'todo', priority: 'normal', dueDate: '2026-04-15', tags: ['productie'], subtasks: [
     { id: 'st-20a', title: '5x White sample', completed: false },
     { id: 'st-20b', title: '5x Black sample', completed: false },
@@ -95,7 +95,7 @@ const SEED_SETTINGS = {
   }
 };
 export function seedData() {
-  const V = 'v6'
+  const V = 'v7'
   const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK }
   const curV = localStorage.getItem('artazest_seed_version')
   for (const [store, items] of Object.entries(stores)) {
