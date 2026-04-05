@@ -80,11 +80,13 @@ export default function Tasks({ user }) {
             const isExp = expanded === task.id
             return (
               <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}
-                style={{flexDirection:'column',alignItems:'stretch',gap:0,
-                  borderLeft: overdue ? '3px solid #DC2626' : dueToday ? '3px solid #D97706' : undefined}}>
+                style={{flexDirection:'column',alignItems:'stretch',gap:0,cursor:'pointer',transition:'background 0.1s',
+                  borderLeft: overdue ? '3px solid #DC2626' : dueToday ? '3px solid #D97706' : undefined}}
+                onMouseEnter={e=>e.currentTarget.style.background='#F2F0EB'}
+                onMouseLeave={e=>e.currentTarget.style.background=''}>
                 <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
                   <div className={`task-checkbox ${task.completed ? 'checked' : ''}`} onClick={() => toggleTask(task.id)} />
-                  <div style={{flex:1,minWidth:0,cursor:'pointer'}} onClick={() => setExpanded(isExp ? null : task.id)}>
+                  <div style={{flex:1,minWidth:0,cursor:'pointer'}} onClick={() => startEdit(task)}>
                     <div className="task-title">{task.title}</div>
                     <div className="task-meta">
                       <span>{task.assignee}</span>
@@ -93,7 +95,7 @@ export default function Tasks({ user }) {
                       {task.dueDate && <> &middot; <span style={{color: overdue ? '#DC2626' : dueToday ? '#D97706' : '#78716C'}}>{overdue ? 'Te laat: ' : dueToday ? 'Vandaag: ' : ''}{task.dueDate}</span></>}
                     </div>
                   </div>
-                  <button onClick={() => startEdit(task)} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.8rem'}} title="Bewerken">&#9998;</button>
+                  
                   <button onClick={() => setConfirmDel(task.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.8rem',opacity:0.4}} title="Verwijderen">&times;</button>
                 </div>
                 {/* Expanded notes */}
