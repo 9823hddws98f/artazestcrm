@@ -49,7 +49,7 @@ const SEED_ARTWORK = [
 ];
 const SEED_SETTINGS = {
   roles: {
-    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/analytics', '/settings'] },
+    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/catalog', '/analytics', '/settings'] },
     Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/artwork'] },
     Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
   }

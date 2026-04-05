@@ -9,6 +9,7 @@ import Inventory from './pages/Inventory'
 import Content from './pages/Content'
 import Artwork from './pages/Artwork'
 import Analytics from './pages/Analytics'
+import Catalog from './pages/Catalog'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/content" element={<Content />} />
         <Route path="/artwork" element={<Artwork />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/catalog" element={<Catalog />} />
         <Route path="/settings" element={<Settings user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
