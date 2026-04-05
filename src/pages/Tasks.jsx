@@ -33,8 +33,31 @@ export default function Tasks({ user }) {
   const removeTag = (t) => setForm({...form, tags: form.tags.filter(x=>x!==t)})
   const addCategory = () => { if (newCat.trim() && !categories.includes(newCat.trim())) { const c = [...categories, newCat.trim()]; setCategories(c); localStorage.setItem('artazest_categories',JSON.stringify(c)); setNewCat('') } }
   const removeCat = (c) => { const nc = categories.filter(x=>x!==c); setCategories(nc); localStorage.setItem('artazest_categories',JSON.stringify(nc)) }
-  const filtered = tasks.filter(t => t.type === (tab==='timeline'?'checklist':tab)).filter(t => filter === 'all' || t.assignee === filter)
-    .sort((a, b) => { if (a.completed !== b.completed) return a.completed ? 1 : -1; if ((a.signal||false) !== (b.signal||false)) return a.signal ? -1 : 1; const p = {high:0,medium:1,low:2}; return (p[a.priority]||1) - (p[b.priority]||1) })
+  const archiveTask = async (id) => {
+    const t = tasks.find(x => x.id === id)
+    if (t) { await api.save('tasks', { ...t, archived: true, archivedAt: new Date().toISOString() }); reload() }
+  }
+  const unarchiveTask = async (id) => {
+    const t = tasks.find(x => x.id === id)
+    if (t) { await api.save('tasks', { ...t, archived: false, archivedAt: null }); reload() }
+  }
+  const archiveAllDone = async () => {
+    const done = tasks.filter(t => t.completed && !t.archived && t.type === (tab==='timeline'?'checklist':tab))
+    for (const t of done) await api.save('tasks', { ...t, archived: true, archivedAt: new Date().toISOString() })
+    reload()
+  }
+  const archivedTasks = tasks.filter(t => t.archived).sort((a,b) => new Date(b.archivedAt||0) - new Date(a.archivedAt||0))
+  const filtered = tasks.filter(t => !t.archived && t.type === (tab==='timeline'?'checklist':tab)).filter(t => filter === 'all' || t.assignee === filter)
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1
+      if ((a.signal||false) !== (b.signal||false)) return a.signal ? -1 : 1
+      // Sort by deadline (soonest first, no deadline last)
+      if (!a.completed && !b.completed && (a.dueDate || b.dueDate)) {
+        if (a.dueDate && !b.dueDate) return -1; if (!a.dueDate && b.dueDate) return 1
+        if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1
+      }
+      const p = {high:0,medium:1,low:2}; return (p[a.priority]||1) - (p[b.priority]||1)
+    })
   const openCount = filtered.filter(t => !t.completed).length
   const doneCount = filtered.filter(t => t.completed).length
   const totalTimeMin = filtered.filter(t => !t.completed).reduce((s,t) => s + (t.timeMin||0), 0)
@@ -42,7 +65,7 @@ export default function Tasks({ user }) {
   const isOverdue = (t) => t.dueDate && t.dueDate < today && !t.completed
   const isDueToday = (t) => t.dueDate === today && !t.completed
   const catProgress = categories.map(c => {
-    const ct = tasks.filter(t => t.type === (tab==='timeline'?'checklist':tab) && t.category === c)
+    const ct = tasks.filter(t => !t.archived && t.type === (tab==='timeline'?'checklist':tab) && t.category === c)
     if (ct.length === 0) return null
     return { cat: c, total: ct.length, done: ct.filter(t => t.completed).length, pct: Math.round((ct.filter(t=>t.completed).length / ct.length) * 100) }
   }).filter(Boolean)
@@ -52,7 +75,7 @@ export default function Tasks({ user }) {
     const d = new Date(); d.setDate(d.getDate() + i)
     timelineDays.push(d.toISOString().slice(0, 10))
   }
-  const timelineTasks = tasks.filter(t => t.type === 'checklist' && t.dueDate && !t.completed)
+  const timelineTasks = tasks.filter(t => !t.archived && t.type === 'checklist' && t.dueDate && !t.completed)
   return (
     <>
       <div className="page-header">
@@ -101,15 +124,44 @@ export default function Tasks({ user }) {
         <button className={`tab ${tab==='weekly'?'active':''}`} onClick={()=>setTab('weekly')}>Wekelijks</button>
         <button className={`tab ${tab==='checklist'?'active':''}`} onClick={()=>setTab('checklist')}>Launch checklist</button>
         <button className={`tab ${tab==='timeline'?'active':''}`} onClick={()=>setTab('timeline')}>2-weken timeline</button>
+        <button className={`tab ${tab==='archief'?'active':''}`} onClick={()=>setTab('archief')} style={{marginLeft:'auto',color:tab==='archief'?undefined:'var(--text-secondary)'}}>Archief ({archivedTasks.length})</button>
       </div>
-      {tab !== 'timeline' && (
-        <div style={{display:'flex',gap:'0.5rem',marginBottom:'1rem'}}>
+      {tab !== 'timeline' && tab !== 'archief' && (
+        <div style={{display:'flex',gap:'0.5rem',marginBottom:'1rem',alignItems:'center'}}>
           <button className={`btn btn-sm ${filter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setFilter('all')}>Alle</button>
           {ASSIGNEES.map(a => <button key={a} className={`btn btn-sm ${filter===a?'btn-primary':'btn-outline'}`} onClick={()=>setFilter(a)}>{a}</button>)}
+          {filtered.filter(t => t.completed).length > 0 && (
+            <button className="btn btn-sm btn-outline" onClick={archiveAllDone} style={{marginLeft:'auto',fontSize:'0.75rem',color:'var(--text-secondary)'}}>
+              Archiveer {filtered.filter(t => t.completed).length} afgeronde →
+            </button>
+          )}
         </div>
       )}
-      {/* TIMELINE VIEW */}
-      {tab === 'timeline' ? (
+      {/* ARCHIVE VIEW */}
+      {tab === 'archief' ? (
+        archivedTasks.length === 0 ? (
+          <div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>
+        ) : (
+          <div className="task-list">
+            {archivedTasks.map(task => (
+              <div key={task.id} className="task-item completed" style={{opacity:0.7}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="task-title" style={{textDecoration:'line-through'}}>{task.title}</div>
+                  <div className="task-meta">
+                    <span>{task.assignee}</span>
+                    {task.category && <> &middot; <span className="badge badge-amber">{task.category}</span></>}
+                    {task.archivedAt && <> &middot; <span style={{color:'var(--text-secondary)'}}>Gearchiveerd {new Date(task.archivedAt).toLocaleDateString('nl-NL')}</span></>}
+                  </div>
+                </div>
+                <button className="btn btn-sm btn-outline" onClick={()=>unarchiveTask(task.id)} style={{fontSize:'0.7rem'}}>Terugzetten</button>
+                <button onClick={()=>setConfirmDel(task.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:'0.8rem'}}>✕</button>
+              </div>
+            ))}
+          </div>
+        )
+      ) :
+      /* TIMELINE VIEW */
+      tab === 'timeline' ? (
         <div className="card" style={{padding:'1rem',overflowX:'auto'}}>
           <div style={{display:'flex',gap:0,minWidth:'700px'}}>
             {timelineDays.map((day,di) => {
@@ -158,7 +210,7 @@ export default function Tasks({ user }) {
                         {task.category && <> &middot; <span className="badge badge-amber">{task.category}</span></>}
                         {task.priority === 'high' && <> &middot; <span className="badge badge-red">Urgent</span></>}
                         {task.timeMin > 0 && <> &middot; <span style={{color:'#78716C'}}>{task.timeMin}min</span></>}
-                        {task.dueDate && <> &middot; <span style={{color:overdue?'#DC2626':dueToday?'#D97706':'#78716C'}}>{overdue?'Te laat: ':dueToday?'Vandaag: ':''}{task.dueDate}</span></>}
+                        {task.dueDate && <> &middot; <span style={{padding:'0.1rem 0.4rem',borderRadius:'4px',fontSize:'0.7rem',fontWeight:600,background:overdue?'#FEE2E2':dueToday?'#FEF3C7':'var(--bg-secondary)',color:overdue?'#DC2626':dueToday?'#D97706':'#78716C'}}>{overdue?'⚠ ':dueToday?'▸ ':''}{new Date(task.dueDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}</span></>}
                       </div>
                       {(task.tags||[]).length > 0 && (
                         <div style={{display:'flex',gap:'0.25rem',marginTop:'0.25rem',flexWrap:'wrap'}}>
@@ -166,7 +218,8 @@ export default function Tasks({ user }) {
                         </div>
                       )}
                     </div>
-                    <button onClick={e=>{e.stopPropagation();setConfirmDel(task.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.8rem',opacity:0.3}}>&times;</button>
+                    {task.completed && <button onClick={e=>{e.stopPropagation();archiveTask(task.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',whiteSpace:'nowrap'}}>Archiveer</button>}
+                    <button onClick={e=>{e.stopPropagation();setConfirmDel(task.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.8rem',opacity:0.3}}>×</button>
                   </div>
                 </div>
               )
