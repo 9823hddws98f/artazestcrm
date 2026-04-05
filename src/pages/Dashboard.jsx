@@ -93,6 +93,70 @@ export default function Dashboard({ user }) {
             <span className="badge badge-red">Bestellen</span></div>))}
         </div>
       </div>
+      {/* Kosten calculator */}
+      <div className="card" style={{marginTop:'1.5rem'}}>
+        <h3 className="section-title" style={{marginBottom:'1rem'}}>Kosten per kunstwerk</h3>
+        <CostCalc />
+      </div>
     </>
+  )
+}
+
+function CostCalc() {
+  const defaults = { panelCost: 25, frameCost: 8, packCost: 5, printCost: 3, laborMin: 30, hourlyRate: 35, sellPrice: 149 }
+  const [c, setC] = useState(() => {
+    const saved = localStorage.getItem('artazest_costs')
+    return saved ? JSON.parse(saved) : defaults
+  })
+  const update = (key, val) => {
+    const next = { ...c, [key]: parseFloat(val) || 0 }
+    setC(next)
+    localStorage.setItem('artazest_costs', JSON.stringify(next))
+  }
+  const laborCost = (c.laborMin / 60) * c.hourlyRate
+  const totalCost = c.panelCost + c.frameCost + c.packCost + c.printCost + laborCost
+  const margin = c.sellPrice - totalCost
+  const marginPct = c.sellPrice > 0 ? Math.round((margin / c.sellPrice) * 100) : 0
+  const f = (key, label) => (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.4rem 0',borderBottom:'1px solid rgba(28,25,23,0.05)'}}>
+      <span style={{fontSize:'0.82rem',color:'#78716C'}}>{label}</span>
+      <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+        <span style={{fontSize:'0.8rem',color:'#78716C'}}>&euro;</span>
+        <input type="number" value={c[key]} onChange={e=>update(key,e.target.value)}
+          style={{width:'65px',textAlign:'right',padding:'2px 6px',border:'1px solid rgba(28,25,23,0.1)',borderRadius:'4px',fontSize:'0.85rem',fontFamily:'var(--font-body)'}}/>
+      </div>
+    </div>
+  )
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1.5rem'}}>
+      <div>
+        {f('panelCost','Paneel (inkoop)')}
+        {f('frameCost','Houten lijst')}
+        {f('packCost','Verpakking')}
+        {f('printCost','Drukwerk (boekje)')}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.4rem 0',borderBottom:'1px solid rgba(28,25,23,0.05)'}}>
+          <span style={{fontSize:'0.82rem',color:'#78716C'}}>Arbeid ({c.laborMin} min)</span>
+          <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+            <input type="number" value={c.laborMin} onChange={e=>update('laborMin',e.target.value)}
+              style={{width:'45px',textAlign:'right',padding:'2px 6px',border:'1px solid rgba(28,25,23,0.1)',borderRadius:'4px',fontSize:'0.85rem',fontFamily:'var(--font-body)'}}/>
+            <span style={{fontSize:'0.75rem',color:'#78716C'}}>min x &euro;</span>
+            <input type="number" value={c.hourlyRate} onChange={e=>update('hourlyRate',e.target.value)}
+              style={{width:'45px',textAlign:'right',padding:'2px 6px',border:'1px solid rgba(28,25,23,0.1)',borderRadius:'4px',fontSize:'0.85rem',fontFamily:'var(--font-body)'}}/>
+            <span style={{fontSize:'0.75rem',color:'#78716C'}}>/u</span>
+          </div>
+        </div>
+        {f('sellPrice','Verkoopprijs')}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:'0.75rem',justifyContent:'center'}}>
+        <div style={{background:'#F2F0EB',borderRadius:'10px',padding:'1rem',textAlign:'center'}}>
+          <div style={{fontSize:'0.7rem',fontWeight:600,color:'#78716C',textTransform:'uppercase',letterSpacing:'0.05em'}}>Kostprijs</div>
+          <div style={{fontSize:'1.5rem',fontFamily:'var(--font-display)'}}>&euro;{totalCost.toFixed(2)}</div>
+        </div>
+        <div style={{background:marginPct>=50?'#D1FAE5':marginPct>=30?'#FEF3C7':'#FEE2E2',borderRadius:'10px',padding:'1rem',textAlign:'center'}}>
+          <div style={{fontSize:'0.7rem',fontWeight:600,color:marginPct>=50?'#065F46':marginPct>=30?'#92400E':'#991B1B',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marge</div>
+          <div style={{fontSize:'1.5rem',fontFamily:'var(--font-display)',color:marginPct>=50?'#059669':marginPct>=30?'#D97706':'#DC2626'}}>&euro;{margin.toFixed(2)} <span style={{fontSize:'0.9rem'}}>({marginPct}%)</span></div>
+        </div>
+      </div>
+    </div>
   )
 }
