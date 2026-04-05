@@ -37,6 +37,12 @@ export default function Inventory() {
   const minPaneel = panelenItems.length > 0 ? Math.min(...panelenItems.map(i => i.quantity)) : 0
   const maxArtworks = Math.floor(minPaneel / PANELS_PER_ARTWORK)
   const avgStock = panelenItems.length > 0 ? Math.round(panelenItems.reduce((s,i) => s + i.quantity, 0) / panelenItems.length) : 0
+  const sectionStats = (key) => {
+    const si = items.filter(i => i.section === key)
+    const total = si.reduce((s,i) => s + i.quantity, 0)
+    const bad = si.filter(i => i.minStock > 0 && i.quantity < i.minStock).length
+    return { count: si.length, total, bad }
+  }
   return (
     <>
       <div className="page-header">
@@ -50,16 +56,19 @@ export default function Inventory() {
       </div>
       <div style={{display:'flex',gap:'0.4rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>
         {SECTIONS.map(s => {
-          const active = tab === s.key, bad = sectionBad(s.key)
+          const active = tab === s.key, bad = sectionBad(s.key), st = sectionStats(s.key)
           return (
             <button key={s.key} onClick={() => setTab(s.key)} style={{
-              padding:'0.45rem 1rem',borderRadius:'99px',border:'none',cursor:'pointer',
-              fontSize:'0.82rem',fontWeight:active?600:500,fontFamily:'var(--font-body)',
+              padding:'0.5rem 1rem',borderRadius:'12px',border:'none',cursor:'pointer',
+              fontFamily:'var(--font-body)',transition:'all 0.15s',textAlign:'left',
               background:active?'#1C1917':'#F2F0EB',color:active?'#fff':'#1C1917',
-              position:'relative',transition:'all 0.15s',
+              position:'relative',minWidth:'120px',
             }}>
-              {s.label}
-              {bad&&<span style={{position:'absolute',top:'-2px',right:'-2px',width:'8px',height:'8px',borderRadius:'50%',background:'#DC2626',border:'2px solid #FAFAF7'}}/>}
+              <div style={{fontSize:'0.82rem',fontWeight:active?600:500}}>{s.label}</div>
+              {st.count > 0 && <div style={{fontSize:'0.7rem',marginTop:'2px',color:active?'rgba(255,255,255,0.7)':'#78716C'}}>
+                {st.total} stuks{st.bad > 0 && <span style={{color:active?'#fca5a5':'#DC2626',fontWeight:600}}> \u00b7 {st.bad} bestellen</span>}
+              </div>}
+              {st.bad > 0 && <span style={{position:'absolute',top:'-2px',right:'-2px',width:'8px',height:'8px',borderRadius:'50%',background:'#DC2626',border:'2px solid #FAFAF7'}}/>}
             </button>
           )
         })}
