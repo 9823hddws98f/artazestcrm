@@ -25,11 +25,11 @@ const SEED_TASKS = [
   { title: 'Instagram story posten', category: 'Content', assignee: 'Sam', type: 'daily', priority: 'low', completed: false },
 ];
 const SEED_INVENTORY = [
-  { name: 'Oak', section: 'panelen', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Walnut', section: 'panelen', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Black', section: 'panelen', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'White', section: 'panelen', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Forest', section: 'panelen', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Oak', section: 'panelen', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '', startStock: 60, batches: [{qty:60,date:'2026-01-12',note:'Eerste bestelling Alibaba'}] },
+  { name: 'Walnut', section: 'panelen', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '', startStock: 60, batches: [{qty:60,date:'2026-01-12',note:'Eerste bestelling Alibaba'}] },
+  { name: 'Black', section: 'panelen', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '', startStock: 60, batches: [{qty:60,date:'2026-01-12',note:'Eerste bestelling Alibaba'}] },
+  { name: 'White', section: 'panelen', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '', startStock: 60, batches: [{qty:60,date:'2026-01-12',note:'Eerste bestelling Alibaba'}] },
+  { name: 'Forest', section: 'panelen', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '', startStock: 60, batches: [{qty:60,date:'2026-01-12',note:'Eerste bestelling Alibaba'}] },
   { name: 'Charcoal', section: 'panelen', quantity: 3, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'Natural', section: 'panelen', quantity: 0, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'Houten lijst', section: 'lijst', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
@@ -55,7 +55,7 @@ const SEED_SETTINGS = {
   }
 };
 export function seedData() {
-  const V = 'v4'
+  const V = 'v5'
   const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK }
   const curV = localStorage.getItem('artazest_seed_version')
   for (const [store, items] of Object.entries(stores)) {
