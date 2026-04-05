@@ -3,12 +3,13 @@ import { NavLink } from 'react-router-dom'
 import SearchBar from './SearchBar'
 
 const allNavItems = [
-  { path: '/', label: 'Dashboard', icon: '\u25C9' },
-  { path: '/tasks', label: 'Taken', icon: '\u2610' },
-  { path: '/inventory', label: 'Voorraad', icon: '\u25A6' },
-  { path: '/content', label: 'Content', icon: '\u25B6' },
-  { path: '/artwork', label: 'Artworks', icon: '\u25C8' },
-  { path: '/settings', label: 'Instellingen', icon: '\u2699' },
+  { path: '/', label: 'Dashboard', icon: '◉' },
+  { path: '/tasks', label: 'Taken', icon: '☐' },
+  { path: '/inventory', label: 'Voorraad', icon: '▦' },
+  { path: '/content', label: 'Content', icon: '▶' },
+  { path: '/artwork', label: 'Artworks', icon: '◈' },
+  { path: '/analytics', label: 'Analytics', icon: '◐' },
+  { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
 
 export default function Layout({ user, onLogout, children }) {
@@ -17,19 +18,17 @@ export default function Layout({ user, onLogout, children }) {
   const initials = name.slice(0, 2).toUpperCase()
   const role = user?.role || 'team'
   const settings = JSON.parse(localStorage.getItem('artazest_settings') || '{}')
-  const userPages = settings.roles?.[name]?.pages || ['/', '/tasks']
+  const userPages = settings.roles?.[name]?.pages || ['/', '/tasks', '/analytics']
   const navItems = allNavItems.filter(item => userPages.includes(item.path))
   return (
     <div className="app-layout">
-      {/* Mobile header */}
       <div className="mobile-header">
         <button onClick={()=>setMobileOpen(!mobileOpen)} style={{background:'none',border:'none',fontSize:'1.5rem',cursor:'pointer',color:'#1C1917'}}>
-          {mobileOpen ? '\u2715' : '\u2630'}
+          {mobileOpen ? '✕' : '☰'}
         </button>
         <span style={{fontFamily:'var(--font-display)',fontSize:'1.2rem'}}>Artazest</span>
         <div style={{width:'28px',height:'28px',borderRadius:'50%',background:'#D97706',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.65rem',fontWeight:600,color:'#fff'}}>{initials}</div>
       </div>
-      {/* Sidebar */}
       <aside className={`sidebar ${mobileOpen?'sidebar-open':''}`}>
         <div className="sidebar-brand"><h2>Artazest</h2><span>Co-Pilot</span></div>
         <nav className="sidebar-nav">

@@ -8,6 +8,7 @@ import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
 import Content from './pages/Content'
 import Artwork from './pages/Artwork'
+import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -21,7 +22,6 @@ export default function App() {
     const u = auth.getUser()
     if (u) setUser(u)
   }, [])
-
   const handleLogin = () => {
     const u = auth.login(loginName, pin)
     if (u) { setUser(u); setError('') }
@@ -51,7 +51,6 @@ export default function App() {
       </div>
     )
   }
-
   return (
     <Layout user={user} onLogout={handleLogout}>
       <Routes>
@@ -60,6 +59,7 @@ export default function App() {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/content" element={<Content />} />
         <Route path="/artwork" element={<Artwork />} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

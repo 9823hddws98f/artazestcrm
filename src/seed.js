@@ -49,7 +49,7 @@ const SEED_ARTWORK = [
 ];
 const SEED_SETTINGS = {
   roles: {
-    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/settings'] },
+    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/analytics', '/settings'] },
     Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/artwork'] },
     Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
   }
@@ -68,4 +68,36 @@ export function seedData() {
     localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
   }
   localStorage.setItem('artazest_seed_version', V)
+
+  // Investment seed data
+  if (!localStorage.getItem('artazest_investments')) {
+    localStorage.setItem('artazest_investments', JSON.stringify([
+      { id: 'inv-001', description: 'Paneel prototypes (3 rondes)', category: 'productie', amount: 2400, date: '2025-11-15', notes: 'Eerste samples van fabriek' },
+      { id: 'inv-002', description: 'Productie tooling & mallen', category: 'productie', amount: 3200, date: '2025-12-20', notes: 'Custom mallen voor 60x60 en 120x60' },
+      { id: 'inv-003', description: 'Product fotografie shoot', category: 'fotografie', amount: 1250, date: '2026-01-18', notes: 'Studio shoot, 7 kleuren, lifestyle' },
+      { id: 'inv-004', description: 'Video content productie', category: 'fotografie', amount: 850, date: '2026-02-10', notes: 'Montage tutorial + brand video' },
+      { id: 'inv-005', description: 'Merknaam registratie Benelux', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP registratie Artazest' },
+      { id: 'inv-006', description: 'Algemene voorwaarden & privacy', category: 'juridisch', amount: 350, date: '2026-01-08', notes: 'Juridisch advies webshop' },
+      { id: 'inv-007', description: 'Logo & visuele identiteit', category: 'branding', amount: 1800, date: '2025-09-20', notes: 'Logo, kleuren, typografie, guidelines' },
+      { id: 'inv-008', description: 'Verpakkingsdesign', category: 'branding', amount: 600, date: '2026-01-25', notes: 'Doos design + inlegvel' },
+      { id: 'inv-009', description: 'Eerste voorraad 7 kleuren (50st)', category: 'voorraad', amount: 1875, date: '2026-02-28', notes: '50 panelen x ~37.50 inkoop' },
+      { id: 'inv-010', description: 'Houten lijsten voorraad', category: 'voorraad', amount: 480, date: '2026-03-05', notes: '60 lijsten' },
+      { id: 'inv-011', description: 'Meta Ads pre-launch campagne', category: 'marketing', amount: 400, date: '2026-03-15', notes: 'Awareness campagne' },
+      { id: 'inv-012', description: 'Shopify abonnement (6 mnd)', category: 'website', amount: 228, date: '2026-01-01', notes: 'Basic plan' },
+      { id: 'inv-013', description: 'Domein artazest.nl + .com', category: 'website', amount: 45, date: '2025-09-01', notes: '2 jaar registratie' },
+      { id: 'inv-014', description: 'Verzenddozen (100st)', category: 'verpakking', amount: 320, date: '2026-03-01', notes: 'Custom maat voor panelen' },
+    ]))
+  }
+  if (!localStorage.getItem('artazest_budgets')) {
+    localStorage.setItem('artazest_budgets', JSON.stringify([
+      { id: 'bud-001', category: 'productie', amount: 6000 },
+      { id: 'bud-002', category: 'fotografie', amount: 2500 },
+      { id: 'bud-003', category: 'juridisch', amount: 1000 },
+      { id: 'bud-004', category: 'branding', amount: 3000 },
+      { id: 'bud-005', category: 'voorraad', amount: 5000 },
+      { id: 'bud-006', category: 'marketing', amount: 3000 },
+      { id: 'bud-007', category: 'website', amount: 800 },
+      { id: 'bud-008', category: 'verpakking', amount: 600 },
+    ]))
+  }
 }
