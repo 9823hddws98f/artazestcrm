@@ -72,9 +72,9 @@ export function seedData() {
   // Investment seed data
   if (!localStorage.getItem('artazest_investments')) {
     localStorage.setItem('artazest_investments', JSON.stringify([
-      { id: 'inv-001', description: 'Paneel prototypes (3 rondes)', category: 'productie', amount: 2400, date: '2025-11-15', notes: 'Eerste samples van fabriek' },
-      { id: 'inv-002', description: 'Productie tooling & mallen', category: 'productie', amount: 3200, date: '2025-12-20', notes: 'Custom mallen voor 60x60 en 120x60' },
-      { id: 'inv-003', description: 'Product fotografie shoot', category: 'fotografie', amount: 1250, date: '2026-01-18', notes: 'Studio shoot, 7 kleuren, lifestyle' },
+      { id: 'inv-001', description: 'Eerste voorraad platen (850 st)', category: 'voorraad', amount: 25000, date: '2025-11-15', notes: '850 akoestische platen' },
+      { id: 'inv-002', description: 'CNC-machine', category: 'productie', amount: 15000, date: '2025-12-20', notes: 'CNC voor productie' },
+      { id: 'inv-003', description: 'Houten lijsten totaal', category: 'productie', amount: 11000, date: '2026-01-18', notes: 'Alle houten lijsten' },
       { id: 'inv-004', description: 'Video content productie', category: 'fotografie', amount: 850, date: '2026-02-10', notes: 'Montage tutorial + brand video' },
       { id: 'inv-005', description: 'Merknaam registratie Benelux', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP registratie Artazest' },
       { id: 'inv-006', description: 'Algemene voorwaarden & privacy', category: 'juridisch', amount: 350, date: '2026-01-08', notes: 'Juridisch advies webshop' },

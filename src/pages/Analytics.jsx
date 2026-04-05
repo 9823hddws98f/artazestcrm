@@ -149,6 +149,7 @@ function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, max
 /* ========== INVESTMENTS TAB ========== */
 function InvestmentsTab({ investments, setInvestments, budgets, setBudgets, showModal, setShowModal, editItem, setEditItem }) {
   const [form, setForm] = useState({ description: '', amount: '', category: 'productie', date: new Date().toISOString().split('T')[0], notes: '' })
+  const [openCat, setOpenCat] = useState(null)
   const [budgetEdit, setBudgetEdit] = useState(null)
 
   const openNew = () => { setForm({ description: '', amount: '', category: 'productie', date: new Date().toISOString().split('T')[0], notes: '' }); setEditItem(null); setShowModal(true) }
@@ -176,16 +177,23 @@ function InvestmentsTab({ investments, setInvestments, budgets, setBudgets, show
         if (!items.length && !bud) return null
         const total = items.reduce((s, i) => s + (i.amount || 0), 0)
         return (
-          <div key={cat.key} className="card" style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <div key={cat.key} className="card" style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer' }}
+            onClick={() => setOpenCat(openCat === cat.key ? null : cat.key)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{cat.icon}</span><h3 style={{ fontSize: '1rem', fontWeight: 500 }}>{cat.label}</h3>
+                <span>{cat.icon}</span><span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{cat.label}</span>
                 <span className="badge badge-amber">{fmt(total)}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{items.length} items</span>
               </div>
-              {budgetEdit === cat.key
-                ? <input type="number" placeholder="Budget" autoFocus className="form-input" style={{ width: '100px', padding: '0.3rem 0.5rem', fontSize: '0.8rem' }} defaultValue={bud?.amount || ''} onBlur={e => saveBudget(cat.key, e.target.value)} onKeyDown={e => e.key === 'Enter' && saveBudget(cat.key, e.target.value)} />
-                : <button className="btn btn-sm btn-outline" onClick={() => setBudgetEdit(cat.key)}>{bud ? `Budget: ${fmt(bud.amount)}` : '+ Budget'}</button>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                {budgetEdit === cat.key
+                  ? <input type="number" placeholder="Budget" autoFocus className="form-input" style={{ width: '100px', padding: '0.3rem 0.5rem', fontSize: '0.8rem' }} defaultValue={bud?.amount || ''} onBlur={e => saveBudget(cat.key, e.target.value)} onKeyDown={e => e.key === 'Enter' && saveBudget(cat.key, e.target.value)} />
+                  : <button className="btn btn-sm btn-outline" onClick={() => setBudgetEdit(cat.key)}>{bud ? `Budget: ${fmt(bud.amount)}` : '+ Budget'}</button>}
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{openCat === cat.key ? '▲' : '▼'}</span>
+              </div>
             </div>
+            {openCat === cat.key && (
+              <div onClick={e => e.stopPropagation()} style={{ marginTop: '0.75rem' }}>
             <table className="data-table">
               <thead><tr><th>Beschrijving</th><th>Datum</th><th style={{ textAlign: 'right' }}>Bedrag</th><th style={{ width: '60px' }}></th></tr></thead>
               <tbody>
@@ -201,6 +209,8 @@ function InvestmentsTab({ investments, setInvestments, budgets, setBudgets, show
                 ))}
               </tbody>
             </table>
+              </div>
+            )}
           </div>
         )
       })}
