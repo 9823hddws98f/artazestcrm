@@ -137,28 +137,19 @@ export default function Inventory() {
                     <button onClick={()=>setExpanded(isExpanded?null:item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.75rem',padding:'4px'}}>{isExpanded?'\u25B2':'\u25BC'}</button>
                     <button onClick={()=>setConfirmDel(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#78716C',fontSize:'0.7rem',opacity:0.3}}>&times;</button>
                   </div>
-                  {item.minStock > 0 && (
-                    <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-                      <div style={{flex:1,height:'8px',borderRadius:'4px',background:'#F2F0EB',overflow:'hidden',position:'relative'}}>
-                        <div style={{position:'absolute',left:'50%',top:0,bottom:0,width:'2px',background:'rgba(28,25,23,0.2)',zIndex:1}}/>
-                        <div style={{height:'100%',borderRadius:'4px',width:`${pct}%`,background:barColor,transition:'width 0.3s'}}/>
-                      </div>
-                      <div style={{fontSize:'0.7rem',color:'#78716C',minWidth:'70px',textAlign:'right'}}>{item.quantity}/{item.minStock} min</div>
-                      {tab==='panelen'&&<div style={{fontSize:'0.7rem',color:'#78716C',minWidth:'80px',textAlign:'right'}}>~{Math.floor(item.quantity/PER_ARTWORK)} kunstwerken</div>}
-                    </div>
-                  )}
-                  {isLow && <div style={{marginTop:'0.35rem',fontSize:'0.75rem',color:'#DC2626',fontWeight:500}}>&triangle; Bestellen &mdash; levertijd {item.leadTimeDays||'?'} dagen</div>}
+                  {/* Clean stats row */}
+                  <div style={{display:'flex',gap:'1.5rem',fontSize:'0.8rem',color:'var(--text-secondary)',flexWrap:'wrap'}}>
+                    <div><span style={{color:'var(--text-secondary)'}}>Op voorraad:</span> <strong style={{color:isEmpty?'var(--danger)':isLow?'var(--accent)':'var(--text-primary)'}}>{item.quantity}</strong></div>
+                    <div><span style={{color:'var(--text-secondary)'}}>Gebruikt:</span> <strong>{used}</strong></div>
+                    <div><span style={{color:'var(--text-secondary)'}}>Levertijd:</span> <strong>{item.leadTimeDays >= 30 ? Math.round(item.leadTimeDays / 30) + ' maanden' : (item.leadTimeDays || 0) + ' dagen'}</strong></div>
+                    {item.supplier && <div><span style={{color:'var(--text-secondary)'}}>Leverancier:</span> <strong>{item.supplier}</strong></div>}
+                  </div>
+                  {isLow && <div style={{marginTop:'0.35rem',fontSize:'0.75rem',color:'#DC2626',fontWeight:500}}>▲ Bestellen — levertijd {item.leadTimeDays >= 30 ? Math.round(item.leadTimeDays / 30) + ' maanden' : (item.leadTimeDays || 0) + ' dagen'}</div>}
                 </div>
                 {/* Expanded detail panel */}
                 {isExpanded && (
                   <div style={{padding:'0 1.25rem 1rem',background:'#FAFAF7',borderTop:'1px solid rgba(28,25,23,0.05)'}}>
-                    <div style={{display:'flex',gap:'2rem',padding:'0.75rem 0',flexWrap:'wrap',fontSize:'0.8rem'}}>
-                      <div><span style={{color:'#78716C'}}>Startvoorraad:</span> <strong>{item.startStock||item.quantity}</strong></div>
-                      <div><span style={{color:'#78716C'}}>Gebruikt:</span> <strong>{used}</strong></div>
-                      <div><span style={{color:'#78716C'}}>Huidig:</span> <strong>{item.quantity}</strong></div>
-                      {item.supplier&&<div><span style={{color:'#78716C'}}>Leverancier:</span> <strong>{item.supplier}</strong></div>}
-                      <div><span style={{color:'#78716C'}}>Levertijd:</span> <strong>{item.leadTimeDays||0} dagen</strong></div>
-                    </div>
+                    {item.notes && <div style={{fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.5rem 0',fontStyle:'italic'}}>{item.notes}</div>}
                     {/* Bestelhistorie */}
                     <div style={{marginTop:'0.5rem'}}>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
