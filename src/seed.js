@@ -49,8 +49,8 @@ const SEED_ARTWORK = [
 ];
 const SEED_SETTINGS = {
   roles: {
-    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/catalog', '/howto', '/analytics', '/settings'] },
-    Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/artwork'] },
+    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/catalog', '/howto', '/analytics', '/settings'] },
+    Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
     Productie: { role: 'team', pages: ['/', '/tasks', '/inventory', '/howto'] },
   }
 };

@@ -5,7 +5,7 @@ const ALL_PAGES = [
   { path: '/tasks', label: 'Taken', icon: '☐' },
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
   { path: '/content', label: 'Content', icon: '▶' },
-  { path: '/artwork', label: 'Artworks', icon: '◈' },
+  { path: '/catalog', label: 'Catalogus', icon: '▣' },
   { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
 
@@ -21,7 +21,7 @@ export default function Settings({ user }) {
     else setSettings({
       roles: {
         Tein: { role: 'admin', pages: ALL_PAGES.map(p => p.path) },
-        Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/artwork'] },
+        Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
         Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
       }
     })

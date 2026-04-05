@@ -7,7 +7,6 @@ const allNavItems = [
   { path: '/tasks', label: 'Taken', icon: '☐' },
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
   { path: '/content', label: 'Content', icon: '▶' },
-  { path: '/artwork', label: 'Artworks', icon: '◈' },
   { path: '/catalog', label: 'Catalogus', icon: '▣' },
   { path: '/howto', label: 'How to make', icon: '⚒' },
   { path: '/analytics', label: 'Analytics', icon: '◐' },

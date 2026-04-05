@@ -14,7 +14,7 @@ export default function Dashboard({ user }) {
   useEffect(() => {
     api.getAll('tasks').then(setTasks)
     api.getAll('inventory').then(setInventory)
-    api.getAll('artwork').then(setArtwork)
+    api.getAll('catalog').then(setArtwork)
     const t = setInterval(() => setDaysLeft(getDaysUntilLaunch()), 60000)
     return () => clearInterval(t)
   }, [])

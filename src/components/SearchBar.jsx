@@ -12,14 +12,14 @@ export default function SearchBar() {
     if (q.length < 2) { setResults([]); return }
     const search = async () => {
       const [tasks, inv, content, art] = await Promise.all([
-        api.getAll('tasks'), api.getAll('inventory'), api.getAll('content'), api.getAll('artwork')
+        api.getAll('tasks'), api.getAll('inventory'), api.getAll('content'), api.getAll('catalog')
       ])
       const lq = q.toLowerCase()
       const r = []
       tasks.filter(t => t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t => r.push({ type: 'Taak', label: t.title, badge: t.category, path: '/tasks' }))
       inv.filter(i => i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i => r.push({ type: 'Voorraad', label: i.name, badge: `${i.quantity} stuks`, path: '/inventory' }))
       content.filter(c => c.title?.toLowerCase().includes(lq)).slice(0,3).forEach(c => r.push({ type: 'Content', label: c.title, badge: c.status, path: '/content' }))
-      art.filter(a => a.name?.toLowerCase().includes(lq)).slice(0,3).forEach(a => r.push({ type: 'Artwork', label: a.name, badge: a.stage, path: '/artwork' }))
+      art.filter(a => a.name?.toLowerCase().includes(lq)).slice(0,3).forEach(a => r.push({ type: 'Artwork', label: a.name, badge: a.stage, path: '/catalog' }))
       setResults(r)
     }
     search()
