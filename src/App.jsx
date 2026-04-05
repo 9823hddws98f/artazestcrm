@@ -8,7 +8,6 @@ import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
 import Content from './pages/Content'
 import Catalog from './pages/Catalog'
-import HowTo from './pages/HowTo'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 
@@ -62,7 +61,6 @@ export default function App() {
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/catalog" element={<Catalog />} />
-        <Route path="/howto" element={<HowTo />} />
         <Route path="/settings" element={<Settings user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

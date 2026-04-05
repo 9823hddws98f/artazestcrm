@@ -8,7 +8,6 @@ const allNavItems = [
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
   { path: '/content', label: 'Content', icon: '▶' },
   { path: '/catalog', label: 'Catalogus', icon: '▣' },
-  { path: '/howto', label: 'How to make', icon: '⚒' },
   { path: '/analytics', label: 'Analytics', icon: '◐' },
   { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
