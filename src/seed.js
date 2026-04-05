@@ -74,7 +74,9 @@ export function seedData() {
     localStorage.setItem('artazest_investments', JSON.stringify([
       { id: 'inv-001', description: 'Eerste voorraad platen (850 st)', category: 'voorraad', amount: 25000, date: '2025-11-15', notes: '850 akoestische platen' },
       { id: 'inv-002', description: 'CNC-machine', category: 'productie', amount: 15000, date: '2025-12-20', notes: '' },
-      { id: 'inv-003', description: 'Houten lijsten totaal', category: 'productie', amount: 11000, date: '2026-01-10', notes: '' },
+      { id: 'inv-003', description: 'Lijsten 60x60cm red oak (50st)', category: 'productie', amount: 2400, date: '2025-03-30', notes: '50x $24 x2' },
+      { id: 'inv-013', description: 'Lijsten 60x120cm red oak (100st)', category: 'productie', amount: 7200, date: '2025-03-30', notes: '100x $36 x2' },
+      { id: 'inv-014', description: 'Lijsten 70x100cm red oak (100st)', category: 'productie', amount: 6820, date: '2025-03-30', notes: '100x $34.10 x2' },
       { id: 'inv-004', description: 'Product fotografie', category: 'fotografie', amount: 1250, date: '2026-01-18', notes: '' },
       { id: 'inv-005', description: 'Video content', category: 'fotografie', amount: 850, date: '2026-02-10', notes: '' },
       { id: 'inv-006', description: 'Merknaam registratie', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP Benelux' },
