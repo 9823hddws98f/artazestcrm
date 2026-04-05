@@ -133,48 +133,130 @@ function Timeline({ tasks, onDropDay, draggedId }) {
   )
 }
 
-function VandaagPanel({ tasks, statuses, onDropToday, onEdit, draggedId }) {
+function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDragEnd, draggedId, onClearDay }) {
   const today = todayISO()
-  const todayTasks = tasks.filter(t => t.plannedDate===today && t.status!=='klaar' && !t.archived)
   const doneTodayCount = tasks.filter(t => t.plannedDate===today && t.status==='klaar').length
   const [isOver, setIsOver] = useState(false)
+  const [localOrder, setLocalOrder] = useState([])
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [internalDragIdx, setInternalDragIdx] = useState(null)
   const dayStr = new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})
 
+  // Sync localOrder with tasks
+  const todayTasks = tasks.filter(t => t.plannedDate===today && t.status!=='klaar' && !t.archived)
+  useEffect(() => {
+    setLocalOrder(prev => {
+      const prevIds = prev.map(t => t.id)
+      const newIds = todayTasks.map(t => t.id)
+      // Keep existing order, append new ones
+      const kept = prev.filter(t => newIds.includes(t.id))
+      const added = todayTasks.filter(t => !prevIds.includes(t.id))
+      return [...kept, ...added]
+    })
+  }, [todayTasks.map(t=>t.id).join(',')])
+
+  const ordered = localOrder.length > 0
+    ? localOrder.filter(t => todayTasks.find(x => x.id === t.id)).map(t => todayTasks.find(x => x.id === t.id))
+    : todayTasks
+
+  const handleInternalDrop = (dropIdx) => {
+    if (internalDragIdx === null || internalDragIdx === dropIdx) return
+    const newOrder = [...ordered]
+    const [moved] = newOrder.splice(internalDragIdx, 1)
+    newOrder.splice(dropIdx, 0, moved)
+    setLocalOrder(newOrder)
+    setDragOverIdx(null)
+    setInternalDragIdx(null)
+  }
+
   return (
-    <div style={{width:'230px',flexShrink:0}}>
-      <div onDragOver={e=>{e.preventDefault();setIsOver(true)}} onDragLeave={()=>setIsOver(false)}
-        onDrop={e=>{e.preventDefault();setIsOver(false);if(draggedId)onDropToday(draggedId)}}
+    <div style={{width:'248px',flexShrink:0}}>
+      <div
+        onDragOver={e=>{e.preventDefault();if(internalDragIdx===null)setIsOver(true)}}
+        onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget)){setIsOver(false);setDragOverIdx(null)}}}
+        onDrop={e=>{
+          e.preventDefault()
+          setIsOver(false)
+          if(internalDragIdx!==null){handleInternalDrop(ordered.length);return}
+          if(draggedId)onDropToday(draggedId)
+        }}
         className="card"
-        style={{borderTop:'3px solid #D97706',position:'sticky',top:'1rem',maxHeight:'calc(100vh - 180px)',overflowY:'auto',background:isOver?'#FFFBF0':'var(--bg-card)',outline:isOver?'2px dashed #D97706':'none',outlineOffset:'2px',transition:'all 0.1s'}}>
+        style={{borderTop:'3px solid #D97706',position:'sticky',top:'1rem',maxHeight:'calc(100vh - 180px)',overflowY:'auto',background:isOver?'#FFFBF0':'var(--bg-card)',outline:isOver&&internalDragIdx===null?'2px dashed #D97706':'none',outlineOffset:'2px',transition:'all 0.1s'}}>
+
         <div style={{marginBottom:'0.75rem'}}>
           <div style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#D97706'}}>Vandaag</div>
           <div style={{fontSize:'0.73rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{dayStr}</div>
-          {doneTodayCount>0&&<div style={{fontSize:'0.7rem',color:'#059669',marginTop:'0.2rem'}}>checkmark {doneTodayCount} afgerond</div>}
+          {doneTodayCount>0&&<div style={{fontSize:'0.7rem',color:'#059669',marginTop:'0.2rem'}}>✓ {doneTodayCount} afgerond</div>}
         </div>
-        {todayTasks.length===0?(
+
+        {ordered.length===0?(
           <div style={{textAlign:'center',padding:'1.5rem 0.5rem 1rem',color:'var(--text-secondary)',fontSize:'0.78rem',lineHeight:1.4}}>
             {isOver?<span style={{color:'#D97706',fontWeight:600}}>Laat hier los</span>:'Sleep taken hiernaartoe voor jouw dagplanning'}
           </div>
         ):(
-          <div style={{display:'flex',flexDirection:'column',gap:'0.4rem'}}>
-            {todayTasks.map(t=>{
+          <div style={{display:'flex',flexDirection:'column',gap:'0'}}>
+            {ordered.map((t, idx) => {
+              if (!t) return null
               const subs=t.subtasks||[]; const subDone=subs.filter(s=>s.completed).length
               const st=statuses.find(s=>s.key===t.status)||statuses[0]
+              const isBeingDragged = internalDragIdx === idx
+              const showDropLine = dragOverIdx === idx && internalDragIdx !== idx
+
               return (
-                <div key={t.id} onClick={()=>onEdit(t)}
-                  style={{padding:'0.5rem 0.6rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:'pointer',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,background:'var(--bg-secondary)'}}
-                  onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.07)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
-                  <div style={{fontSize:'0.8rem',fontWeight:500,marginBottom:'0.2rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</div>
-                  <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
-                    <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{t.assignee}</span>
-                    {subs.length>0&&<span style={{fontSize:'0.65rem',color:subDone===subs.length?'#059669':'var(--text-secondary)'}}>{subDone}/{subs.length}</span>}
+                <div key={t.id}>
+                  {/* Drop indicator lijn */}
+                  <div
+                    onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverIdx(idx)}}
+                    onDrop={e=>{e.preventDefault();e.stopPropagation();handleInternalDrop(idx)}}
+                    style={{height: showDropLine ? '3px' : '0', background:'#D97706', borderRadius:'2px', margin: showDropLine ? '2px 0' : '0', transition:'all 0.1s'}}
+                  />
+                  <div
+                    draggable
+                    onDragStart={e=>{
+                      e.dataTransfer.effectAllowed='move'
+                      e.dataTransfer.setData('text/plain', t.id)
+                      setInternalDragIdx(idx)
+                      onDragStart && onDragStart(t.id)
+                    }}
+                    onDragEnd={()=>{setInternalDragIdx(null);setDragOverIdx(null);onDragEnd&&onDragEnd()}}
+                    onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverIdx(idx+1)}}
+                    onClick={()=>onEdit(t)}
+                    style={{padding:'0.45rem 0.55rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:'grab',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,background:'var(--bg-secondary)',marginBottom:'0.3rem',opacity:isBeingDragged?0.35:1,transition:'opacity 0.15s,box-shadow 0.1s',userSelect:'none'}}
+                    onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.07)'}
+                    onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:'0.35rem'}}>
+                      <span style={{color:'var(--text-secondary)',fontSize:'0.65rem',paddingTop:'0.1rem',cursor:'grab',flexShrink:0}}>⠿</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:'0.79rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:'0.35rem',marginTop:'0.1rem'}}>
+                          <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{t.assignee}</span>
+                          {subs.length>0&&<span style={{fontSize:'0.63rem',color:subDone===subs.length?'#059669':'var(--text-secondary)'}}>{subDone}/{subs.length}</span>}
+                        </div>
+                        {subs.length>0&&<div style={{marginTop:'0.25rem',height:'2px',background:'var(--bg-card)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(subDone/subs.length*100)}%`,background:subDone===subs.length?'#059669':'#D97706',borderRadius:'99px'}}/></div>}
+                      </div>
+                      {/* Verwijder uit vandaag */}
+                      <button
+                        onClick={e=>{e.stopPropagation();onClearDay&&onClearDay(t.id)}}
+                        title="Verwijder uit dagplanning"
+                        style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',padding:'0.1rem 0.15rem',lineHeight:1,flexShrink:0,borderRadius:'4px'}}
+                        onMouseEnter={e=>e.currentTarget.style.color='#DC2626'}
+                        onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>×</button>
+                    </div>
                   </div>
-                  {subs.length>0&&(<div style={{marginTop:'0.3rem',height:'3px',background:'var(--bg-card)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(subDone/subs.length*100)}%`,background:subDone===subs.length?'#059669':'#D97706',borderRadius:'99px'}}/></div>)}
                 </div>
               )
             })}
-            {isOver&&<div style={{textAlign:'center',padding:'0.5rem',borderRadius:'6px',border:'2px dashed #D97706',color:'#D97706',fontSize:'0.75rem',fontWeight:600}}>Hier neerzetten</div>}
+            {/* Bodem drop zone */}
+            <div
+              onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverIdx(ordered.length)}}
+              onDrop={e=>{e.preventDefault();e.stopPropagation();if(internalDragIdx!==null){handleInternalDrop(ordered.length)}else if(draggedId){onDropToday(draggedId)}}}
+              style={{height:dragOverIdx===ordered.length&&internalDragIdx!==null?'3px':'20px',background:dragOverIdx===ordered.length&&internalDragIdx!==null?'#D97706':'transparent',borderRadius:'2px',transition:'all 0.1s'}}
+            />
           </div>
+        )}
+
+        {isOver&&ordered.length>0&&internalDragIdx===null&&(
+          <div style={{textAlign:'center',padding:'0.4rem',borderRadius:'6px',border:'2px dashed #D97706',color:'#D97706',fontSize:'0.73rem',fontWeight:600,marginTop:'0.25rem'}}>↓ Hier neerzetten</div>
         )}
       </div>
     </div>
@@ -291,6 +373,7 @@ export default function Tasks({ user }) {
   const archiveTask=async id=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()});reload()}}
   const assignDay=async(id,date)=>{const t=tasks.find(x=>x.id===id);if(!t)return;const ns=t.status==='todo'?'gepland':t.status;await api.save('tasks',{...t,plannedDate:date,status:ns,completed:ns==='klaar'});setDraggedId(null);reload()}
   const assignToday=async id=>assignDay(id,todayISO())
+  const clearDay=async id=>{const t=tasks.find(x=>x.id===id);if(!t)return;await api.save('tasks',{...t,plannedDate:'',status:t.status==='gepland'?'todo':t.status});reload()}
   const toggleSubtaskOnCard=async(taskId,subId)=>{const t=tasks.find(x=>x.id===taskId);if(!t)return;const upd={...t,subtasks:(t.subtasks||[]).map(s=>s.id===subId?{...s,completed:!s.completed}:s)};if(upd.subtasks.length>0&&upd.subtasks.every(s=>s.completed)){upd.status='klaar';upd.completed=true};await api.save('tasks',upd);reload()}
   const addTag=()=>{if(tagInput.trim()&&!form.tags.includes(tagInput.trim())){setForm({...form,tags:[...form.tags,tagInput.trim()]});setTagInput('')}}
   const removeTag=t=>setForm({...form,tags:form.tags.filter(x=>x!==t)})
@@ -346,7 +429,7 @@ export default function Tasks({ user }) {
             <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>{filtered.map(t=><TaskCard key={t.id} task={t} statuses={statuses} draggable onDragStart={()=>setDraggedId(t.id)} onDragEnd={()=>setDraggedId(null)} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onSubtaskToggle={subId=>toggleSubtaskOnCard(t.id,subId)} onArchive={()=>archiveTask(t.id)}/>)}</div>
           )}
         </div>
-        <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId}/>
+        <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId} onDragStart={id=>setDraggedId(id)} onDragEnd={()=>setDraggedId(null)} onClearDay={clearDay}/>
       </div>
 
       {confirmDel&&(<div className="modal-overlay" onClick={()=>setConfirmDel(null)}><div className="modal" style={{maxWidth:'380px',textAlign:'center'}} onClick={e=>e.stopPropagation()}><h3 style={{marginBottom:'0.75rem'}}>Taak verwijderen?</h3><div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}><button className="btn btn-outline" onClick={()=>setConfirmDel(null)}>Annuleren</button><button className="btn btn-primary" style={{background:'var(--danger)'}} onClick={()=>del(confirmDel)}>Verwijderen</button></div></div></div>)}
