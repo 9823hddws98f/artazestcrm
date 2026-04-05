@@ -74,7 +74,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, draggedId }) {
   const dayStr = new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})
 
   return (
-    <div style={{width:'248px',flexShrink:0}}>
+    <div style={{width:'230px',flexShrink:0}}>
       <div onDragOver={e=>{e.preventDefault();setIsOver(true)}} onDragLeave={()=>setIsOver(false)}
         onDrop={e=>{e.preventDefault();setIsOver(false);if(draggedId)onDropToday(draggedId)}}
         className="card"
@@ -131,7 +131,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
       style={{padding:compact?'0.55rem 0.6rem':'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',marginBottom:compact?'0.4rem':'0',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
       <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem'}}>
-        <div style={{flex:1,minWidth:0}}>
+        <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           <div style={{fontWeight:500,fontSize:compact?'0.81rem':'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:compact?'nowrap':'normal'}}>{t.title}</div>
           <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',marginTop:'0.15rem',display:'flex',gap:'0.3rem',alignItems:'center',flexWrap:'wrap'}}>
             <span>{t.assignee}</span>
@@ -247,7 +247,7 @@ export default function Tasks({ user }) {
       <div style={{display:'flex',gap:'1.25rem',alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
           {view==='kanban'?(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.85rem'}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
               {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={ns=>draggedId&&updateStatus(draggedId,ns)} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>archiveTask(id)} draggedId={draggedId}/>))}
             </div>
           ):view==='archief'?(
