@@ -4,11 +4,12 @@ import { api } from '../api'
 const ASSIGNEES = ['Tein','Sam','Productie']
 const LAUNCH = new Date('2026-04-18T09:00:00')
 const CATEGORIES = ['Shopify','Content','Ads','Design','Productie','Juridisch','Email','Verpakking','Overig']
-const STATUSES = [
+const DEFAULT_STATUSES = [
   { key: 'todo', label: 'To do', color: '#78716C' },
   { key: 'bezig', label: 'Bezig', color: '#D97706' },
   { key: 'klaar', label: 'Klaar', color: '#059669' },
 ]
+const COLORS = ['#78716C','#D97706','#059669','#2563EB','#7C3AED','#DC2626','#0891B2']
 
 function daysUntil(date) {
   if (!date) return null
@@ -27,6 +28,30 @@ export default function Tasks({ user }) {
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',tags:[]})
   const [tagInput, setTagInput] = useState('')
+  const [statuses, setStatuses] = useState(() => {
+    const s = localStorage.getItem('artazest_statuses')
+    return s ? JSON.parse(s) : DEFAULT_STATUSES
+  })
+  const [showPhaseEdit, setShowPhaseEdit] = useState(false)
+  const [newPhase, setNewPhase] = useState('')
+
+  const saveStatuses = st => { setStatuses(st); localStorage.setItem('artazest_statuses', JSON.stringify(st)) }
+  const addPhase = () => {
+    if (!newPhase.trim()) return
+    const key = newPhase.trim().toLowerCase().replace(/\s+/g,'-')
+    if (statuses.find(s=>s.key===key)) return
+    const usedColors = statuses.map(s=>s.color)
+    const nextColor = COLORS.find(c=>!usedColors.includes(c)) || COLORS[0]
+    saveStatuses([...statuses, {key, label: newPhase.trim(), color: nextColor}])
+    setNewPhase('')
+  }
+  const removePhase = key => {
+    if (statuses.length <= 2) return
+    saveStatuses(statuses.filter(s=>s.key!==key))
+    // Move tasks in deleted phase to first phase
+    tasks.filter(t=>t.status===key).forEach(async t => { await api.save('tasks',{...t,status:statuses[0].key}); reload() })
+  }
+  const STATUSES = statuses
 
   useEffect(() => { reload() }, [])
   const reload = () => api.getAll('tasks').then(setTasks)
@@ -85,8 +110,32 @@ export default function Tasks({ user }) {
         <div style={{display:'flex',gap:'0.35rem'}}>
           <button className={`btn btn-sm ${filterUser==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser('all')}>Alle</button>
           {ASSIGNEES.map(a => <button key={a} className={`btn btn-sm ${filterUser===a?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser(a)}>{a}</button>)}
+          <button className="btn btn-sm btn-outline" onClick={()=>setShowPhaseEdit(!showPhaseEdit)} style={{marginLeft:'0.25rem',fontSize:'0.75rem',color:'var(--text-secondary)'}}>⚙</button>
         </div>
       </div>
+
+      {/* Phase editor */}
+      {showPhaseEdit && (
+        <div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.75rem'}}>
+            <span style={{fontSize:'0.8rem',fontWeight:600}}>Fases beheren</span>
+            <span style={{fontSize:'0.7rem',color:'var(--text-secondary)'}}>min. 2 fases</span>
+          </div>
+          <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.75rem'}}>
+            {statuses.map(s => (
+              <div key={s.key} style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.3rem 0.6rem',borderRadius:'99px',border:'1px solid var(--border)',fontSize:'0.8rem'}}>
+                <span style={{width:'8px',height:'8px',borderRadius:'50%',background:s.color}}/>
+                <span style={{fontWeight:500}}>{s.label}</span>
+                {statuses.length > 2 && <button onClick={()=>removePhase(s.key)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',marginLeft:'0.15rem'}}>✕</button>}
+              </div>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:'0.35rem'}}>
+            <input className="form-input" value={newPhase} onChange={e=>setNewPhase(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addPhase()} placeholder="Nieuwe fase..." style={{maxWidth:'180px',padding:'0.3rem 0.6rem',fontSize:'0.8rem'}}/>
+            <button className="btn btn-sm btn-outline" onClick={addPhase}>+</button>
+          </div>
+        </div>
+      )}
 
       {/* KANBAN VIEW */}
       {view === 'kanban' ? (
