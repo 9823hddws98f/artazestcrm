@@ -37,7 +37,7 @@ export default function Inventory() {
     setBatchForm({ qty: 0, date: '', note: '' }); setShowBatch(null); reload()
   }
   const del = async (id) => { await api.remove('inventory', id); setConfirmDel(null); reload() }
-  const current = items.filter(i => i.section === tab).sort((a, b) => a.quantity - b.quantity)
+  const current = items.filter(i => i.section === tab).sort((a, b) => a.quantity - b.quantity).sort((a, b) => a.quantity - b.quantity)
   const needsOrder = items.filter(i => i.minStock > 0 && i.quantity < i.minStock).length
   const sectionBad = (key) => items.filter(i => i.section === key && i.minStock > 0 && i.quantity < i.minStock).length > 0
   const sectionStats = (key) => {
@@ -103,6 +103,8 @@ export default function Inventory() {
             const isLow = item.minStock > 0 && item.quantity < item.minStock
             const isEmpty = item.quantity === 0 && item.minStock > 0
             const barColor = isEmpty ? '#DC2626' : isLow ? '#D97706' : '#059669'
+            const stockPct = item.startStock > 0 ? Math.round((item.quantity / item.startStock) * 100) : 100
+            const dotColor = isEmpty ? '#DC2626' : isLow ? '#D97706' : stockPct < 50 ? '#F59E0B' : '#059669'
             const used = (item.startStock || item.quantity) - item.quantity
             const isExpanded = expanded === item.id
             return (
@@ -115,6 +117,7 @@ export default function Inventory() {
                         onKeyDown={e=>{if(e.key==='Enter'){updateField(item,'name',e.target.value);setEditing(null)}}}/>
                     ) : (
                       <div style={{flex:1,fontWeight:500,fontSize:'0.9rem',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.4rem'}} onClick={()=>setEditing(item.id+'-name')}>
+                      <span style={{width:'10px',height:'10px',borderRadius:'50%',background:dotColor,flexShrink:0,boxShadow:`0 0 0 2px ${dotColor}33`}}/>
                       <span style={{borderBottom:'1px dashed rgba(28,25,23,0.25)'}}>{item.name}</span>
                       <span style={{fontSize:'0.7rem',color:'#A8A29E'}}>&#9998;</span>
                     </div>
