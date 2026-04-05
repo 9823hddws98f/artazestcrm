@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 
 const KLEUREN = [
-  { key: 'donkerblauw', label: 'Donkerblauw', hex: '#1B2A4A' },
-  { key: 'zwart', label: 'Zwart', hex: '#1C1917' },
-  { key: 'sahara', label: 'Sahara Zand', hex: '#D4B896' },
-  { key: 'wit', label: 'Wit', hex: '#F5F0EB' },
-  { key: 'terracotta', label: 'Terracotta', hex: '#C4624A' },
+  { key: 'snowwhite', label: 'Snow White', hex: '#F5F0EB' },
+  { key: 'midnightblack', label: 'MidnightBlack', hex: '#1C1917' },
+  { key: 'oceanblue', label: 'Ocean Blue', hex: '#1B2A4A' },
+  { key: 'forestgreen', label: 'Forest Green', hex: '#2D4A3E' },
+  { key: 'stonegrey', label: 'Stone Grey', hex: '#8A8680' },
+  { key: 'saharabeige', label: 'Sahara Beige', hex: '#D4B896' },
+  { key: 'ivorywhite', label: 'Ivory White', hex: '#F0E8DC' },
 ]
 const FORMATS = ['60 x 60','120 x 60','100 x 70','114 x 60','70 x 100','120 x 30','90 cm']
 
