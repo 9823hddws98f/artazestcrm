@@ -73,19 +73,16 @@ export function seedData() {
   if (!localStorage.getItem('artazest_investments')) {
     localStorage.setItem('artazest_investments', JSON.stringify([
       { id: 'inv-001', description: 'Eerste voorraad platen (850 st)', category: 'voorraad', amount: 25000, date: '2025-11-15', notes: '850 akoestische platen' },
-      { id: 'inv-002', description: 'CNC-machine', category: 'productie', amount: 15000, date: '2025-12-20', notes: 'CNC voor productie' },
-      { id: 'inv-003', description: 'Houten lijsten totaal', category: 'productie', amount: 11000, date: '2026-01-18', notes: 'Alle houten lijsten' },
-      { id: 'inv-004', description: 'Video content productie', category: 'fotografie', amount: 850, date: '2026-02-10', notes: 'Montage tutorial + brand video' },
-      { id: 'inv-005', description: 'Merknaam registratie Benelux', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP registratie Artazest' },
-      { id: 'inv-006', description: 'Algemene voorwaarden & privacy', category: 'juridisch', amount: 350, date: '2026-01-08', notes: 'Juridisch advies webshop' },
-      { id: 'inv-007', description: 'Logo & visuele identiteit', category: 'branding', amount: 1800, date: '2025-09-20', notes: 'Logo, kleuren, typografie, guidelines' },
-      { id: 'inv-008', description: 'Verpakkingsdesign', category: 'branding', amount: 600, date: '2026-01-25', notes: 'Doos design + inlegvel' },
-      { id: 'inv-009', description: 'Eerste voorraad 7 kleuren (50st)', category: 'voorraad', amount: 1875, date: '2026-02-28', notes: '50 panelen x ~37.50 inkoop' },
-      { id: 'inv-010', description: 'Houten lijsten voorraad', category: 'voorraad', amount: 480, date: '2026-03-05', notes: '60 lijsten' },
-      { id: 'inv-011', description: 'Meta Ads pre-launch campagne', category: 'marketing', amount: 400, date: '2026-03-15', notes: 'Awareness campagne' },
-      { id: 'inv-012', description: 'Shopify abonnement (6 mnd)', category: 'website', amount: 228, date: '2026-01-01', notes: 'Basic plan' },
-      { id: 'inv-013', description: 'Domein artazest.nl + .com', category: 'website', amount: 45, date: '2025-09-01', notes: '2 jaar registratie' },
-      { id: 'inv-014', description: 'Verzenddozen (100st)', category: 'verpakking', amount: 320, date: '2026-03-01', notes: 'Custom maat voor panelen' },
+      { id: 'inv-002', description: 'CNC-machine', category: 'productie', amount: 15000, date: '2025-12-20', notes: '' },
+      { id: 'inv-003', description: 'Houten lijsten totaal', category: 'productie', amount: 11000, date: '2026-01-10', notes: '' },
+      { id: 'inv-004', description: 'Product fotografie', category: 'fotografie', amount: 1250, date: '2026-01-18', notes: '' },
+      { id: 'inv-005', description: 'Video content', category: 'fotografie', amount: 850, date: '2026-02-10', notes: '' },
+      { id: 'inv-006', description: 'Merknaam registratie', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP Benelux' },
+      { id: 'inv-007', description: 'Logo & identiteit', category: 'branding', amount: 1800, date: '2025-09-20', notes: '' },
+      { id: 'inv-008', description: 'Verpakkingsdesign', category: 'branding', amount: 600, date: '2026-01-25', notes: '' },
+      { id: 'inv-009', description: 'Meta Ads pre-launch', category: 'marketing', amount: 400, date: '2026-03-15', notes: '' },
+      { id: 'inv-010', description: 'Shopify (6 mnd)', category: 'website', amount: 228, date: '2026-01-01', notes: '' },
+      { id: 'inv-011', description: 'Verzenddozen', category: 'verpakking', amount: 320, date: '2026-03-01', notes: '' },
     ]))
   }
   if (!localStorage.getItem('artazest_budgets')) {
