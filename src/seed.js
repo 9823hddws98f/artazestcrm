@@ -30,6 +30,7 @@ const SEED_INVENTORY = [
   { name: 'Black', section: 'panelen', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'White', section: 'panelen', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'Forest', section: 'panelen', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Charcoal', section: 'panelen', quantity: 3, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'Natural', section: 'panelen', quantity: 0, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
   { name: 'Houten lijst', section: 'lijst', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
   { name: 'Knopje', section: 'lijst', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Ophangbeugel' },
@@ -54,14 +55,17 @@ const SEED_SETTINGS = {
   }
 };
 export function seedData() {
-  const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK };
+  const V = 'v4'
+  const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK }
+  const curV = localStorage.getItem('artazest_seed_version')
   for (const [store, items] of Object.entries(stores)) {
-    const existing = localStorage.getItem(`artazest_${store}`);
-    if (existing && JSON.parse(existing).length > 0) continue;
-    const withIds = items.map((item, i) => ({ ...item, id: `seed-${store}-${i}`, createdAt: new Date().toISOString() }));
-    localStorage.setItem(`artazest_${store}`, JSON.stringify(withIds));
+    const existing = localStorage.getItem('artazest_' + store)
+    if (existing && JSON.parse(existing).length > 0 && curV === V) continue
+    const withIds = items.map((item, i) => ({ ...item, id: 'seed-' + store + '-' + i, createdAt: new Date().toISOString() }))
+    localStorage.setItem('artazest_' + store, JSON.stringify(withIds))
   }
   if (!localStorage.getItem('artazest_settings')) {
-    localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS));
+    localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
   }
+  localStorage.setItem('artazest_seed_version', V)
 }
