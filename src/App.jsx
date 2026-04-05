@@ -10,6 +10,7 @@ import Content from './pages/Content'
 import Artwork from './pages/Artwork'
 import Analytics from './pages/Analytics'
 import Catalog from './pages/Catalog'
+import HowTo from './pages/HowTo'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/artwork" element={<Artwork />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/catalog" element={<Catalog />} />
+        <Route path="/howto" element={<HowTo />} />
         <Route path="/settings" element={<Settings user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
