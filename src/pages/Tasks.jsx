@@ -21,6 +21,82 @@ const fmt = d => new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'sh
 const todayISO = () => new Date().toISOString().slice(0,10)
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
 
+// ─── DAGELIJKSE CHECK-INS ───────────────────────────────────────────────────
+const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
+
+function DagelijkseCheckins() {
+  const today = new Date().toISOString().slice(0,10)
+  const load = () => JSON.parse(localStorage.getItem('artazest_checkins') || '[]')
+  const save = items => localStorage.setItem('artazest_checkins', JSON.stringify(items))
+
+  const [items, setItems] = useState(load)
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
+
+  const reload = () => setItems(load())
+  const isChecked = item => item.checkedDate === today
+
+  const toggle = id => {
+    const updated = items.map(i => i.id===id ? {...i, checkedDate: isChecked(i)?null:today} : i)
+    save(updated); setItems(updated)
+  }
+  const add = () => {
+    if (!form.name.trim()) return
+    const newItem = {...form, id: `ci-${Date.now()}`, checkedDate: null}
+    const updated = [...items, newItem]
+    save(updated); setItems(updated); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
+  }
+  const remove = id => { const updated = items.filter(i => i.id!==id); save(updated); setItems(updated) }
+
+  const doneCount = items.filter(isChecked).length
+
+  return (
+    <div style={{marginBottom:'1rem'}}>
+      <div style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.5rem'}}>
+        <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Dagelijkse check-ins</span>
+        {items.length>0&&<span style={{fontSize:'0.65rem',color:doneCount===items.length?'#059669':'var(--text-secondary)',fontWeight:600}}>{doneCount}/{items.length} gedaan</span>}
+        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'1px solid var(--border)',borderRadius:'99px',fontSize:'0.65rem',padding:'0.1rem 0.5rem',cursor:'pointer',color:'var(--text-secondary)',marginLeft:'auto'}}>+ Persoon</button>
+      </div>
+
+      {items.length===0&&!showAdd&&(
+        <div style={{fontSize:'0.75rem',color:'var(--text-secondary)',padding:'0.4rem 0'}}>Voeg mensen toe die je dagelijks moet checken.</div>
+      )}
+
+      <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
+        {items.map(item => {
+          const done = isChecked(item)
+          return (
+            <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.45rem',padding:'0.35rem 0.6rem',borderRadius:'99px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',transition:'all 0.15s',cursor:'pointer'}} onClick={()=>toggle(item.id)}>
+              <div style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s'}}>
+                {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
+              </div>
+              <div>
+                <span style={{fontSize:'0.78rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none'}}>{item.name}</span>
+                <span style={{fontSize:'0.68rem',color:'var(--text-secondary)',marginLeft:'0.35rem'}}>{item.via}</span>
+                {item.topic&&<span style={{fontSize:'0.65rem',color:'var(--text-secondary)',marginLeft:'0.35rem'}}>· {item.topic}</span>}
+              </div>
+              <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem',padding:'0 0.1rem',lineHeight:1,opacity:0.6}} onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>×</button>
+            </div>
+          )
+        })}
+
+        {showAdd&&(
+          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',padding:'0.3rem 0.5rem',borderRadius:'10px',border:'1px dashed var(--border-strong)',background:'var(--bg-secondary)',flexWrap:'wrap'}}>
+            <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam..." style={{border:'none',background:'transparent',fontSize:'0.78rem',fontWeight:600,outline:'none',width:'90px',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
+            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.7rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
+              {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
+            </select>
+            <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Waarover..." style={{border:'none',background:'transparent',fontSize:'0.7rem',outline:'none',width:'110px',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}/>
+            <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'6px',fontSize:'0.7rem',padding:'0.2rem 0.5rem',cursor:'pointer',fontFamily:'var(--font-body)'}}>+ Toevoegen</button>
+            <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem'}}>Annuleer</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 function Timeline({ tasks, onDropDay, draggedId }) {
   const today = new Date(); today.setHours(0,0,0,0)
   const DAYS = 14
@@ -398,6 +474,7 @@ export default function Tasks({ user }) {
         <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
       </div>
 
+      <DagelijkseCheckins/>
       <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId}/>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
