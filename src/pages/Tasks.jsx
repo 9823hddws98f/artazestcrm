@@ -23,45 +23,112 @@ const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
 
 function Timeline({ tasks, onDropDay, draggedId }) {
   const today = new Date(); today.setHours(0,0,0,0)
-  const days = Array.from({length:14},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()+i); return d })
+  const DAYS = 14
+  const DAY_W = 54 // px per dag
+  const LABEL_W = 156
+  const days = Array.from({length:DAYS},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()+i); return d })
   const toISO = d => d.toISOString().slice(0,10)
   const todayStr = toISO(today)
+  const launchStr = '2026-04-18'
   const [overDay, setOverDay] = useState(null)
 
+  // Bereken dag-index (0 = vandaag) voor een ISO-datum
+  const dayIdx = iso => Math.round((new Date(iso) - today) / (1000*60*60*24))
+
+  // Taken met datums, gesorteerd op startdatum
+  const ganttTasks = tasks
+    .filter(t => !t.archived && t.status !== 'klaar' && (t.plannedDate || t.dueDate))
+    .sort((a,b) => (a.plannedDate||a.dueDate) > (b.plannedDate||b.dueDate) ? 1 : -1)
+    .slice(0, 10)
+
+  const statusColor = { todo:'#9CA3AF', gepland:'#2563EB', bezig:'#D97706', klaar:'#059669' }
+  const launchIdx = dayIdx(launchStr)
+
   return (
-    <div style={{marginBottom:'1.25rem'}}>
-      <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
-        <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)'}}>14-dagen planning</span>
-        <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>— sleep taken naar een dag</span>
-      </div>
-      <div style={{overflowX:'auto',paddingBottom:'4px'}}>
-        <div style={{display:'flex',gap:'0.45rem',minWidth:'max-content',padding:'2px'}}>
-          {days.map(day => {
-            const iso = toISO(day)
-            const isToday = iso === todayStr
-            const isOver = overDay === iso && !!draggedId
-            const isWeekend = day.getDay()===0||day.getDay()===6
-            const dayTasks = tasks.filter(t => t.plannedDate===iso && t.status!=='klaar' && !t.archived)
-            return (
-              <div key={iso}
-                onDragOver={e=>{e.preventDefault();setOverDay(iso)}}
-                onDragLeave={()=>setOverDay(null)}
-                onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId)onDropDay(draggedId,iso)}}
-                style={{width:'88px',minHeight:'92px',borderRadius:'10px',padding:'0.45rem 0.4rem',flexShrink:0,background:isOver?'#EFF6FF':isToday?'#FFF7ED':isWeekend?'rgba(0,0,0,0.025)':'var(--bg-secondary)',border:isOver?'2px dashed #2563EB':isToday?'2px solid #D97706':'1px solid var(--border)',transition:'border 0.1s,background 0.1s',cursor:'default',boxSizing:'border-box'}}>
-                <div style={{fontSize:'0.58rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',marginBottom:'0.05rem'}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
-                <div style={{fontSize:'0.88rem',fontWeight:700,color:isToday?'#D97706':'var(--text-primary)',lineHeight:1,marginBottom:'0.3rem'}}>{day.getDate()} <span style={{fontSize:'0.62rem',fontWeight:500,opacity:0.7}}>{day.toLocaleDateString('nl-NL',{month:'short'})}</span></div>
-                <div style={{display:'flex',flexDirection:'column',gap:'0.1rem'}}>
-                  {dayTasks.slice(0,3).map(t=>(
-                    <div key={t.id} title={t.title} style={{fontSize:'0.6rem',padding:'0.1rem 0.28rem',borderRadius:'3px',background:t.priority==='high'?'#FEE2E2':'rgba(28,25,23,0.07)',color:t.priority==='high'?'#991B1B':'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontWeight:500}}>{t.title}</div>
-                  ))}
-                  {dayTasks.length>3&&<div style={{fontSize:'0.57rem',color:'var(--text-secondary)',paddingLeft:'0.2rem'}}>+{dayTasks.length-3}</div>}
-                  {dayTasks.length===0&&isOver&&<div style={{fontSize:'0.6rem',color:'#2563EB',textAlign:'center',paddingTop:'0.25rem'}}>hier neerzetten</div>}
+    <div style={{marginBottom:'1.25rem',border:'1px solid var(--border)',borderRadius:'10px',overflow:'hidden',background:'var(--bg-card)'}}>
+      {/* HEADER: dag-kolommen */}
+      <div style={{display:'flex',borderBottom:'1px solid var(--border)',background:'var(--bg-secondary)'}}>
+        <div style={{width:LABEL_W,flexShrink:0,padding:'0.4rem 0.75rem',fontSize:'0.6rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',display:'flex',alignItems:'center'}}>Taken</div>
+        <div style={{flex:1,overflowX:'auto'}}>
+          <div style={{display:'flex',minWidth:DAYS*DAY_W}}>
+            {days.map((day,i) => {
+              const iso = toISO(day)
+              const isToday = iso === todayStr
+              const isLaunch = iso === launchStr
+              const isWeekend = day.getDay()===0||day.getDay()===6
+              const isOver = overDay===iso && !!draggedId
+              return (
+                <div key={iso}
+                  onDragOver={e=>{e.preventDefault();setOverDay(iso)}}
+                  onDragLeave={()=>setOverDay(null)}
+                  onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId)onDropDay(draggedId,iso)}}
+                  style={{width:DAY_W,flexShrink:0,padding:'0.3rem 0.15rem',textAlign:'center',borderRight:'1px solid var(--border)',background:isOver?'#DBEAFE':isToday?'#FFF7ED':isLaunch?'#FEF3C7':isWeekend?'rgba(0,0,0,0.025)':'transparent',cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                  <div style={{fontSize:'0.55rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isLaunch?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',lineHeight:1}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
+                  <div style={{fontSize:'0.75rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#D97706':'var(--text-primary)',lineHeight:1.2}}>{day.getDate()}</div>
+                  {isLaunch&&<div style={{fontSize:'0.5rem',color:'#D97706',fontWeight:700,lineHeight:1}}>launch</div>}
+                  {isOver&&<div style={{position:'absolute',inset:0,border:'2px dashed #2563EB',borderRadius:'2px',pointerEvents:'none'}}/>}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
+
+      {/* GANTT RIJEN */}
+      <div style={{position:'relative'}}>
+        {/* Vandaag-lijn */}
+        <div style={{position:'absolute',left:LABEL_W + DAY_W*0 + DAY_W/2,top:0,bottom:0,width:'2px',background:'#F97316',opacity:0.35,pointerEvents:'none',zIndex:1}}/>
+        {/* Launch-lijn */}
+        {launchIdx>=0&&launchIdx<DAYS&&<div style={{position:'absolute',left:LABEL_W + DAY_W*launchIdx + DAY_W/2,top:0,bottom:0,width:'2px',background:'#D97706',opacity:0.5,pointerEvents:'none',zIndex:1,borderStyle:'dashed'}}/>}
+
+        {ganttTasks.length===0?(
+          <div style={{padding:'0.9rem 0.75rem',fontSize:'0.75rem',color:'var(--text-secondary)',paddingLeft:LABEL_W+8}}>Sleep taken vanuit de kanban om ze te plannen op de tijdlijn</div>
+        ):ganttTasks.map(task=>{
+          const startISO = task.plannedDate || task.dueDate
+          const endISO = task.dueDate || task.plannedDate
+          const si = Math.max(0, dayIdx(startISO))
+          const ei = Math.min(DAYS-1, dayIdx(endISO))
+          if (si > DAYS-1) return null
+          const barLeft = si * DAY_W
+          const barW = Math.max(DAY_W - 6, (ei - si + 1) * DAY_W - 6)
+          const color = task.priority==='high'?'#DC2626':statusColor[task.status]||'#9CA3AF'
+          const subs = task.subtasks||[]
+          const subPct = subs.length>0?Math.round(subs.filter(s=>s.completed).length/subs.length*100):null
+
+          return (
+            <div key={task.id} style={{display:'flex',alignItems:'stretch',borderBottom:'1px solid rgba(28,25,23,0.05)',minHeight:'34px'}}>
+              {/* Label */}
+              <div style={{width:LABEL_W,flexShrink:0,padding:'0.2rem 0.75rem',fontSize:'0.71rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--text-primary)',display:'flex',alignItems:'center',borderRight:'1px solid var(--border)'}}>
+                <span style={{display:'inline-block',width:'6px',height:'6px',borderRadius:'50%',background:color,flexShrink:0,marginRight:'0.35rem'}}/>
+                {task.title}
+              </div>
+              {/* Bar area */}
+              <div style={{flex:1,position:'relative',overflow:'hidden'}}>
+                {/* Grid achtergrond */}
+                <div style={{position:'absolute',inset:0,display:'flex'}}>
+                  {days.map((day,i)=>{
+                    const iso=toISO(day)
+                    const isToday=iso===todayStr; const isWeekend=day.getDay()===0||day.getDay()===6; const isLaunch=iso===launchStr
+                    return <div key={iso} style={{width:DAY_W,flexShrink:0,height:'100%',borderRight:'1px solid rgba(28,25,23,0.04)',background:isToday?'rgba(249,115,22,0.04)':isLaunch?'rgba(217,119,6,0.05)':isWeekend?'rgba(0,0,0,0.01)':'transparent'}}/>
+                  })}
+                </div>
+                {/* Taak balk */}
+                <div style={{position:'absolute',left:barLeft+3,width:barW,top:'6px',height:'22px',borderRadius:'4px',background:color,opacity:0.85,display:'flex',alignItems:'center',paddingLeft:'6px',paddingRight:'4px',overflow:'hidden',gap:'4px'}}>
+                  <span style={{fontSize:'0.58rem',color:'#fff',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',flex:1}}>{task.assignee}</span>
+                  {subPct!==null&&<span style={{fontSize:'0.55rem',color:'rgba(255,255,255,0.85)',flexShrink:0}}>{subPct}%</span>}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* DROP HINT */}
+      {draggedId&&(
+        <div style={{padding:'0.4rem 0.75rem',fontSize:'0.68rem',color:'#2563EB',background:'#EFF6FF',borderTop:'1px solid #BFDBFE',fontWeight:500}}>
+          Sleep naar een dag hierboven om te plannen
+        </div>
+      )}
     </div>
   )
 }
