@@ -123,30 +123,51 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   const subs = t.subtasks||[]; const subDone=subs.filter(s=>s.completed).length
   const subPct = subs.length>0?Math.round(subDone/subs.length*100):null
 
+  if (compact) {
+    return (
+      <div draggable={isDraggable}
+        onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);onDragStart&&onDragStart()}}}
+        onDragEnd={()=>onDragEnd&&onDragEnd()}
+        onClick={onClick}
+        style={{padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'grab',background:'var(--bg-card)',marginBottom:'0.28rem',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,userSelect:'none'}}
+        onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
+        onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+        <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3}}>{t.title}</div>
+        <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
+          <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
+          {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
+          {t.dueDate&&<span style={{fontSize:'0.58rem',fontWeight:600,padding:'0.02rem 0.26rem',borderRadius:'3px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'transparent',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)',whiteSpace:'nowrap'}}>{overdue?`${Math.abs(days)}d te laat`:isToday2?'Vandaag':soon?`${days}d`:fmt(t.dueDate)}</span>}
+          {subPct!==null&&<span style={{fontSize:'0.58rem',color:subPct===100?'#059669':'var(--text-secondary)',marginLeft:'auto',flexShrink:0}}>{subDone}/{subs.length}</span>}
+        </div>
+        {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
+      </div>
+    )
+  }
+
   return (
     <div draggable={isDraggable}
       onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);onDragStart&&onDragStart()}}}
       onDragEnd={()=>onDragEnd&&onDragEnd()}
       onClick={onClick}
-      style={{padding:compact?'0.55rem 0.6rem':'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',marginBottom:compact?'0.4rem':'0',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
+      style={{padding:'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
       <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem'}}>
-        <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
-          <div style={{fontWeight:500,fontSize:compact?'0.81rem':'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:compact?'nowrap':'normal'}}>{t.title}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:500,fontSize:'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none'}}>{t.title}</div>
           <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',marginTop:'0.15rem',display:'flex',gap:'0.3rem',alignItems:'center',flexWrap:'wrap'}}>
             <span>{t.assignee}</span>
             <span className="badge badge-amber" style={{fontSize:'0.6rem'}}>{t.category}</span>
             {t.priority==='high'&&<span className="badge badge-red" style={{fontSize:'0.6rem'}}>Urgent</span>}
             {t.dueDate&&<span style={{padding:'0.08rem 0.3rem',borderRadius:'4px',fontSize:'0.6rem',fontWeight:600,background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'var(--bg-secondary)',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)'}}>{overdue?`${Math.abs(days)}d te laat`:isToday2?'Vandaag':soon?`${days}d`:fmt(t.dueDate)}</span>}
-            {t.plannedDate&&!compact&&<span style={{fontSize:'0.6rem',color:'#2563EB',fontWeight:500}}>plan {fmt(t.plannedDate)}</span>}
+            {t.plannedDate&&<span style={{fontSize:'0.6rem',color:'#2563EB',fontWeight:500}}>plan {fmt(t.plannedDate)}</span>}
           </div>
-          {subPct!==null&&(<div style={{marginTop:'0.35rem',display:'flex',alignItems:'center',gap:'0.35rem'}}><div style={{flex:1,height:'3px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div><span style={{fontSize:'0.6rem',color:'var(--text-secondary)',whiteSpace:'nowrap'}}>{subDone}/{subs.length}</span></div>)}
-          {!compact&&subs.length>0&&(<div style={{display:'flex',flexDirection:'column',gap:'0.18rem',marginTop:'0.35rem'}} onClick={e=>e.stopPropagation()}>{subs.map(sub=>(<div key={sub.id} style={{display:'flex',alignItems:'center',gap:'0.35rem'}}><input type="checkbox" checked={sub.completed} onChange={()=>onSubtaskToggle&&onSubtaskToggle(sub.id)} style={{width:'12px',height:'12px',cursor:'pointer',accentColor:'var(--accent)',flexShrink:0}}/><span style={{fontSize:'0.75rem',textDecoration:sub.completed?'line-through':'none',color:sub.completed?'var(--text-secondary)':'var(--text-primary)'}}>{sub.title}</span></div>))}</div>)}
+          {subPct!==null&&<div style={{marginTop:'0.35rem',display:'flex',alignItems:'center',gap:'0.35rem'}}><div style={{flex:1,height:'3px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div><span style={{fontSize:'0.6rem',color:'var(--text-secondary)',whiteSpace:'nowrap'}}>{subDone}/{subs.length}</span></div>}
+          {subs.length>0&&<div style={{display:'flex',flexDirection:'column',gap:'0.18rem',marginTop:'0.35rem'}} onClick={e=>e.stopPropagation()}>{subs.map(sub=><div key={sub.id} style={{display:'flex',alignItems:'center',gap:'0.35rem'}}><input type="checkbox" checked={sub.completed} onChange={()=>onSubtaskToggle&&onSubtaskToggle(sub.id)} style={{width:'12px',height:'12px',cursor:'pointer',accentColor:'var(--accent)',flexShrink:0}}/><span style={{fontSize:'0.75rem',textDecoration:sub.completed?'line-through':'none',color:sub.completed?'var(--text-secondary)':'var(--text-primary)'}}>{sub.title}</span></div>)}</div>}
         </div>
         <div style={{display:'flex',gap:'0.15rem',flexShrink:0,paddingTop:'0.1rem'}} onClick={e=>e.stopPropagation()}>
-          {statuses.map(s=>(<button key={s.key} onClick={()=>onStatusChange(s.key)} title={s.label} style={{width:compact?'18px':'22px',height:compact?'18px':'22px',borderRadius:'50%',border:t.status===s.key?'none':`2px solid ${s.color}40`,background:t.status===s.key?s.color:'transparent',cursor:'pointer',fontSize:'0.55rem',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{t.status===s.key&&'checkmark'}</button>))}
+          {statuses.map(s=><button key={s.key} onClick={()=>onStatusChange(s.key)} title={s.label} style={{width:'22px',height:'22px',borderRadius:'50%',border:t.status===s.key?'none':`2px solid ${s.color}40`,background:t.status===s.key?s.color:'transparent',cursor:'pointer',fontSize:'0.55rem',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{t.status===s.key&&'✓'}</button>)}
         </div>
-        {!compact&&t.status==='klaar'&&onArchive&&(<button onClick={e=>{e.stopPropagation();onArchive()}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-secondary)',whiteSpace:'nowrap',paddingTop:'0.1rem'}}>Archiveer</button>)}
+        {t.status==='klaar'&&onArchive&&<button onClick={e=>{e.stopPropagation();onArchive()}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-secondary)',whiteSpace:'nowrap',paddingTop:'0.1rem'}}>Archiveer</button>}
       </div>
     </div>
   )
