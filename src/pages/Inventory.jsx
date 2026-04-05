@@ -114,7 +114,10 @@ export default function Inventory() {
                         defaultValue={item.name} onBlur={e=>{updateField(item,'name',e.target.value);setEditing(null)}}
                         onKeyDown={e=>{if(e.key==='Enter'){updateField(item,'name',e.target.value);setEditing(null)}}}/>
                     ) : (
-                      <div style={{flex:1,fontWeight:500,fontSize:'0.9rem',cursor:'pointer'}} onClick={()=>setEditing(item.id+'-name')} title="Klik om te bewerken">{item.name}</div>
+                      <div style={{flex:1,fontWeight:500,fontSize:'0.9rem',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.4rem'}} onClick={()=>setEditing(item.id+'-name')}>
+                      <span style={{borderBottom:'1px dashed rgba(28,25,23,0.25)'}}>{item.name}</span>
+                      <span style={{fontSize:'0.7rem',color:'#A8A29E'}}>&#9998;</span>
+                    </div>
                     )}
                     <span style={{padding:'0.15rem 0.55rem',borderRadius:'99px',fontSize:'0.7rem',fontWeight:600,whiteSpace:'nowrap',
                       background:isEmpty?'#FEE2E2':isLow?'#FEF3C7':'#D1FAE5',
@@ -127,7 +130,7 @@ export default function Inventory() {
                           defaultValue={item.quantity} onBlur={e=>{updateField(item,'quantity',parseInt(e.target.value)||0);setEditing(null)}}
                           onKeyDown={e=>{if(e.key==='Enter'){updateField(item,'quantity',parseInt(e.target.value)||0);setEditing(null)}}}/>
                       ) : (
-                        <span style={{fontWeight:600,minWidth:'30px',textAlign:'center',fontSize:'0.95rem',cursor:'pointer'}} onClick={()=>setEditing(item.id+'-qty')}>{item.quantity}</span>
+                        <span style={{fontWeight:600,minWidth:'30px',textAlign:'center',fontSize:'0.95rem',cursor:'pointer',borderBottom:'1px dashed rgba(28,25,23,0.25)'}} onClick={()=>setEditing(item.id+'-qty')}>{item.quantity}</span>
                       )}
                       <button onClick={()=>updateQty(item,1)} style={{width:'26px',height:'26px',borderRadius:'50%',border:'1px solid rgba(28,25,23,0.15)',background:'none',cursor:'pointer',fontSize:'0.9rem',display:'flex',alignItems:'center',justifyContent:'center',color:'#78716C'}}>+</button>
                     </div>
