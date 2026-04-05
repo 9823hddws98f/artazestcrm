@@ -25,19 +25,32 @@ const SEED_TASKS = [
   { title: 'Instagram story posten', category: 'Content', assignee: 'Sam', type: 'daily', priority: 'low', completed: false },
 ];
 const SEED_INVENTORY = [
-  { name: 'Paneel — Oak', type: 'Panelen', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '50x50cm' },
-  { name: 'Paneel — Walnut', type: 'Panelen', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '50x50cm' },
-  { name: 'Paneel — Black', type: 'Panelen', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '50x50cm' },
-  { name: 'Paneel — White', type: 'Panelen', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '50x50cm' },
-  { name: 'Paneel — Forest', type: 'Panelen', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '50x50cm' },
-  { name: 'Custom plakband', type: 'Verpakking', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded tape' },
-  { name: 'Verzenddozen', type: 'Verpakking', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen!' },
-  { name: 'Product boekje', type: 'Drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Sample folder', type: 'Drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Sample set compleet', type: 'Samples', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '5 kleuren per set' },
+  // Akoestische panelen 240x120
+  { name: 'Oak', section: 'Akoestische panelen 240×120', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Walnut', section: 'Akoestische panelen 240×120', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Black', section: 'Akoestische panelen 240×120', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'White', section: 'Akoestische panelen 240×120', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Forest', section: 'Akoestische panelen 240×120', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Natural', section: 'Akoestische panelen 240×120', quantity: 0, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  // Houten lijst & knop
+  { name: 'Houten lijst', section: 'Houten lijst & knop', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
+  { name: 'Knopje (ophangbeugel)', section: 'Houten lijst & knop', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
+  // Karton & verpakking
+  { name: 'Verzenddozen', section: 'Karton & verpakking', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen' },
+  { name: 'Custom plakband', section: 'Karton & verpakking', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded tape' },
+  { name: 'Vulmateriaal', section: 'Karton & verpakking', quantity: 0, minStock: 20, leadTimeDays: 5, supplier: '', notes: '' },
+  // Drukwerk
+  { name: 'Product boekje', section: 'Drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
+  { name: 'Sample folder', section: 'Drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
+  { name: 'Visitekaartjes', section: 'Drukwerk', quantity: 0, minStock: 100, leadTimeDays: 7, supplier: '', notes: '' },
+  // Samples snijden
+  { name: 'Sample set compleet (5 kleuren)', section: 'Samples snijden', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
+  { name: 'Losse samples', section: 'Samples snijden', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
+  // CNC
+  { name: 'CNC freeswerk', section: 'CNC', quantity: 0, minStock: 0, leadTimeDays: 0, supplier: '', notes: 'Nog uitzoeken' },
 ];
 const SEED_ARTWORK = [
-  { name: 'Artwork 1', stage: 'foto', colors: ['Oak', 'Walnut', 'Black', 'White', 'Forest'], designer: '', notes: 'Fotoselectie afronden — 45 shots scope' },
+  { name: 'Artwork 1', stage: 'foto', colors: ['Oak', 'Walnut', 'Black', 'White', 'Forest', 'Natural'], designer: '', notes: 'Fotoselectie afronden — 45 shots scope' },
   { name: 'Artwork 2', stage: 'design', colors: ['Oak', 'Walnut', 'Black'], designer: '', notes: 'Nieuw design' },
   { name: 'Artwork 3', stage: 'design', colors: [], designer: '', notes: 'Concept fase' },
 ];
