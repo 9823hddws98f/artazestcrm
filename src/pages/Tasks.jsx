@@ -150,7 +150,7 @@ export default function Tasks({ user }) {
                   <span style={{fontSize:'0.75rem',color:'var(--text-secondary)',marginLeft:'auto'}}>{col.length}</span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',minHeight:'100px'}}>
-                  {col.map(t => <TaskCard key={t.id} task={t} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} compact/>)}
+                  {col.map(t => <TaskCard key={t.id} task={t} statuses={STATUSES} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} compact/>)}
                 </div>
               </div>
             )
@@ -169,7 +169,7 @@ export default function Tasks({ user }) {
         /* LIST VIEW */
         filtered.length === 0 ? <div className="card"><div className="empty-state">Geen taken{filterUser!=='all'?` voor ${filterUser}`:''}</div></div> :
         <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
-          {filtered.map(t => <TaskCard key={t.id} task={t} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onArchive={()=>archiveTask(t.id)}/>)}
+          {filtered.map(t => <TaskCard key={t.id} task={t} statuses={STATUSES} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onArchive={()=>archiveTask(t.id)}/>)}
         </div>
       )}
 
@@ -237,7 +237,7 @@ export default function Tasks({ user }) {
   )
 }
 
-function TaskCard({task:t,onClick,onStatusChange,onArchive,compact}) {
+function TaskCard({task:t,statuses:STATUSES,onClick,onStatusChange,onArchive,compact}) {
   const days = daysUntil(t.dueDate)
   const overdue = days !== null && days < 0 && t.status !== 'klaar'
   const today = days === 0 && t.status !== 'klaar'
