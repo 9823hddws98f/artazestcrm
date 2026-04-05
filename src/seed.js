@@ -104,7 +104,7 @@ export function seedData() {
     const withIds = items.map((item, i) => ({ ...item, id: 'seed-' + store + '-' + i, createdAt: new Date().toISOString() }))
     localStorage.setItem('artazest_' + store, JSON.stringify(withIds))
   }
-  if (!localStorage.getItem('artazest_settings')) {
+  if (!localStorage.getItem('artazest_settings') || curV !== V) {
     localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
   }
   localStorage.setItem('artazest_seed_version', V)
