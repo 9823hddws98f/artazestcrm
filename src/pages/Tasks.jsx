@@ -16,14 +16,14 @@ export default function Tasks({ user }) {
   })
   const [newCat, setNewCat] = useState('')
   const [showCatEdit, setShowCatEdit] = useState(false)
-  const [form, setForm] = useState({title:'',category:'Overig',assignee:'Tein',type:'daily',priority:'medium',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false})
+  const [form, setForm] = useState({title:'',category:'Overig',assignee:'Tein',type:'daily',priority:'normal',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false})
   const [tagInput, setTagInput] = useState('')
   useEffect(() => { reload() }, [])
   const reload = () => api.getAll('tasks').then(setTasks)
   const handleSave = async () => {
     if (!form.title.trim()) return
     await api.save('tasks', { ...form, type: tab === 'timeline' ? 'checklist' : tab, createdAt: form.createdAt || new Date().toISOString() })
-    setForm({title:'',category:'Overig',assignee:user?.name||'Tein',type:tab,priority:'medium',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false})
+    setForm({title:'',category:'Overig',assignee:user?.name||'Tein',type:tab,priority:'normal',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false})
     setShowAdd(false); setEditing(null); reload()
   }
   const toggleTask = async (id) => { await api.toggle('tasks', id, 'completed'); reload() }
@@ -87,7 +87,7 @@ export default function Tasks({ user }) {
         </div>
         <div style={{display:'flex',gap:'0.5rem'}}>
           <button className="btn btn-outline btn-sm" onClick={()=>setShowCatEdit(!showCatEdit)}>Tags &amp; categorie&euml;n</button>
-          <button className="btn btn-primary" onClick={() => { setForm({title:'',category:'Overig',assignee:user?.name||'Tein',type:tab==='timeline'?'checklist':tab,priority:'medium',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false}); setEditing(null); setShowAdd(true) }}>+ Nieuwe taak</button>
+          <button className="btn btn-primary" onClick={() => { setForm({title:'',category:'Overig',assignee:user?.name||'Tein',type:tab==='timeline'?'checklist':tab,priority:'normal',notes:'',dueDate:'',completed:false,tags:[],timeMin:0,signal:false}); setEditing(null); setShowAdd(true) }}>+ Nieuwe taak</button>
         </div>
       </div>
       {showCatEdit && (
@@ -259,11 +259,14 @@ export default function Tasks({ user }) {
               <div className="form-group"><label className="form-label">Tijd (min)</label>
                 <input className="form-input" type="number" value={form.timeMin} onChange={e=>setForm({...form,timeMin:parseInt(e.target.value)||0})} placeholder="0"/></div>
               <div className="form-group"><label className="form-label">Prioriteit</label>
-                <div style={{display:'flex',gap:'0.25rem'}}>
-                  {['high','medium','low'].map(p=><button key={p} className={`btn btn-sm ${form.priority===p?'btn-primary':'btn-outline'}`}
-                    onClick={()=>setForm({...form,priority:p})} style={{flex:1,justifyContent:'center',fontSize:'0.7rem',padding:'0.3rem'}}>
-                    {p==='high'?'!':p==='medium'?'=':'_'}</button>)}
-                </div></div>
+                <div style={{display:'flex',gap:'0.35rem'}}>
+                  {[{k:'high',l:'Urgent',bg:'#FEE2E2',c:'#991B1B',ab:'#DC2626'},{k:'medium',l:'Medium',bg:'#FEF3C7',c:'#92400E',ab:'#D97706'}].map(p=><button key={p.k} className="btn btn-sm"
+                    onClick={()=>setForm({...form,priority:form.priority===p.k?'normal':p.k})}
+                    style={{flex:1,justifyContent:'center',fontSize:'0.75rem',padding:'0.35rem 0.5rem',background:form.priority===p.k?p.ab:undefined,color:form.priority===p.k?'#fff':undefined,border:form.priority===p.k?'none':'1px solid var(--border-strong)'}}>
+                    {p.l}</button>)}
+                </div>
+                <div style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginTop:'0.25rem'}}>{form.priority==='high'?'Bovenaan + rood label':form.priority==='medium'?'Oranje label':'Geen selectie = normaal'}</div>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label" style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
