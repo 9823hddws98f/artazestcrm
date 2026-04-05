@@ -1,17 +1,23 @@
 import { NavLink } from 'react-router-dom'
 
-const navItems = [
+const allNavItems = [
   { path: '/', label: 'Dashboard', icon: '◉' },
   { path: '/tasks', label: 'Taken', icon: '☐' },
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
   { path: '/content', label: 'Content', icon: '▶' },
   { path: '/artwork', label: 'Artworks', icon: '◈' },
+  { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
 
 export default function Layout({ user, onLogout, children }) {
   const name = user?.name || 'User'
   const initials = name.slice(0, 2).toUpperCase()
   const role = user?.role || 'team'
+
+  // Get allowed pages from settings
+  const settings = JSON.parse(localStorage.getItem('artazest_settings') || '{}')
+  const userPages = settings.roles?.[name]?.pages || ['/', '/tasks']
+  const navItems = allNavItems.filter(item => userPages.includes(item.path))
 
   return (
     <div className="app-layout">
@@ -22,10 +28,8 @@ export default function Layout({ user, onLogout, children }) {
         </div>
         <nav className="sidebar-nav">
           {navItems.map(item => (
-            <NavLink key={item.path} to={item.path}
-              end={item.path === '/'}
-              className={({isActive}) =>
-                `sidebar-link ${isActive ? 'active' : ''}`}>
+            <NavLink key={item.path} to={item.path} end={item.path==='/'}
+              className={({isActive}) => `sidebar-link ${isActive ? 'active' : ''}`}>
               <span style={{fontSize:'1.1rem'}}>{item.icon}</span>
               <span>{item.label}</span>
             </NavLink>

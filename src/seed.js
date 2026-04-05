@@ -25,35 +25,34 @@ const SEED_TASKS = [
   { title: 'Instagram story posten', category: 'Content', assignee: 'Sam', type: 'daily', priority: 'low', completed: false },
 ];
 const SEED_INVENTORY = [
-  // Akoestische panelen 240x120
-  { name: 'Oak', section: 'Akoestische panelen 240×120', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Walnut', section: 'Akoestische panelen 240×120', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Black', section: 'Akoestische panelen 240×120', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'White', section: 'Akoestische panelen 240×120', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Forest', section: 'Akoestische panelen 240×120', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  { name: 'Natural', section: 'Akoestische panelen 240×120', quantity: 0, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
-  // Houten lijst & knop
-  { name: 'Houten lijst', section: 'Houten lijst & knop', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
-  { name: 'Knopje (ophangbeugel)', section: 'Houten lijst & knop', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
-  // Karton & verpakking
-  { name: 'Verzenddozen', section: 'Karton & verpakking', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen' },
-  { name: 'Custom plakband', section: 'Karton & verpakking', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded tape' },
-  { name: 'Vulmateriaal', section: 'Karton & verpakking', quantity: 0, minStock: 20, leadTimeDays: 5, supplier: '', notes: '' },
-  // Drukwerk
-  { name: 'Product boekje', section: 'Drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Sample folder', section: 'Drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Visitekaartjes', section: 'Drukwerk', quantity: 0, minStock: 100, leadTimeDays: 7, supplier: '', notes: '' },
-  // Samples snijden
-  { name: 'Sample set compleet (5 kleuren)', section: 'Samples snijden', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
-  { name: 'Losse samples', section: 'Samples snijden', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
-  // CNC
-  { name: 'CNC freeswerk', section: 'CNC', quantity: 0, minStock: 0, leadTimeDays: 0, supplier: '', notes: 'Nog uitzoeken' },
+  { name: 'Oak', section: 'panelen', quantity: 15, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Walnut', section: 'panelen', quantity: 12, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Black', section: 'panelen', quantity: 10, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'White', section: 'panelen', quantity: 8, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Forest', section: 'panelen', quantity: 5, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Natural', section: 'panelen', quantity: 0, minStock: 10, leadTimeDays: 90, supplier: 'Alibaba', notes: '' },
+  { name: 'Houten lijst', section: 'lijst', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
+  { name: 'Knopje', section: 'lijst', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Ophangbeugel' },
+  { name: 'Verzenddozen', section: 'karton', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen' },
+  { name: 'Custom plakband', section: 'karton', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded' },
+  { name: 'Product boekje', section: 'drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
+  { name: 'Sample folder', section: 'drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
+  { name: 'Sample set (5 kleuren)', section: 'samples', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
+  { name: 'Losse samples', section: 'samples', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
+  { name: 'CNC freeswerk', section: 'cnc', quantity: 0, minStock: 0, leadTimeDays: 0, supplier: '', notes: 'Nog uitzoeken' },
 ];
 const SEED_ARTWORK = [
-  { name: 'Artwork 1', stage: 'foto', colors: ['Oak', 'Walnut', 'Black', 'White', 'Forest', 'Natural'], designer: '', notes: 'Fotoselectie afronden — 45 shots scope' },
-  { name: 'Artwork 2', stage: 'design', colors: ['Oak', 'Walnut', 'Black'], designer: '', notes: 'Nieuw design' },
+  { name: 'Artwork 1', stage: 'foto', colors: ['Oak','Walnut','Black','White','Forest','Natural'], designer: '', notes: 'Fotoselectie — 45 shots' },
+  { name: 'Artwork 2', stage: 'design', colors: ['Oak','Walnut','Black'], designer: '', notes: 'Nieuw design' },
   { name: 'Artwork 3', stage: 'design', colors: [], designer: '', notes: 'Concept fase' },
 ];
+const SEED_SETTINGS = {
+  roles: {
+    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/artwork', '/settings'] },
+    Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/artwork'] },
+    Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
+  }
+};
 export function seedData() {
   const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK };
   for (const [store, items] of Object.entries(stores)) {
@@ -61,5 +60,8 @@ export function seedData() {
     if (existing && JSON.parse(existing).length > 0) continue;
     const withIds = items.map((item, i) => ({ ...item, id: `seed-${store}-${i}`, createdAt: new Date().toISOString() }));
     localStorage.setItem(`artazest_${store}`, JSON.stringify(withIds));
+  }
+  if (!localStorage.getItem('artazest_settings')) {
+    localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS));
   }
 }
