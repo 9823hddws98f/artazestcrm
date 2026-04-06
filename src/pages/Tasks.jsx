@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 
 const ASSIGNEES = ['Tein','Sam']
@@ -762,13 +762,16 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
 
 function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId}) {
   const [isOver,setIsOver]=useState(false)
+  const dropRef = React.useRef(null)
   return (
     <div style={{display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.55rem',padding:'0.4rem 0.6rem',borderRadius:'var(--radius-md)',background:'var(--bg-secondary)'}}>
         <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/><span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span>
       </div>
-      <div onDragOver={e=>{e.preventDefault();setIsOver(true)}} onDragLeave={()=>setIsOver(false)}
-        onDrop={e=>{e.preventDefault();setIsOver(false);if(draggedId)onDrop(status.key)}}
+      <div ref={dropRef}
+        onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(!isOver)setIsOver(true)}}
+        onDragLeave={e=>{if(dropRef.current&&!dropRef.current.contains(e.relatedTarget))setIsOver(false)}}
+        onDrop={e=>{e.preventDefault();e.stopPropagation();setIsOver(false);const id=e.dataTransfer.getData('text/plain');if(id)onDrop(status.key,id)}}
         style={{flex:1,minHeight:'140px',borderRadius:'var(--radius-md)',padding:'0.3rem',background:isOver?'#EFF6FF':'rgba(0,0,0,0.01)',border:isOver?'2px dashed #2563EB':'2px solid transparent',transition:'all 0.1s'}}>
         {tasks.map(t=>(<TaskCard key={t.id} task={t} statuses={statuses} compact draggable onDragStart={()=>onCardDragStart(t.id)} onDragEnd={onCardDragEnd} onClick={()=>onCardClick(t)} onStatusChange={s=>onStatusChange(t.id,s)} onSubtaskToggle={subId=>onSubtaskToggle(t.id,subId)} onArchive={()=>onArchive(t.id)}/>))}
         {tasks.length===0&&<div style={{textAlign:'center',padding:'1.25rem 0.5rem',color:'var(--text-secondary)',fontSize:'0.73rem'}}>{isOver?<span style={{color:'#2563EB',fontWeight:600}}>Hier neerzetten</span>:'Leeg'}</div>}
@@ -784,6 +787,7 @@ export default function Tasks({ user }) {
   const [filterUser,setFilterUser]=useState(user?.name||'all')
   const [editing,setEditing]=useState(null)
   const [confirmDel,setConfirmDel]=useState(null)
+  const [confirmMigratePhase,setConfirmMigratePhase]=useState(null) // {key, label, taskCount}
   const [draggedId,setDraggedId]=useState(null)
   const [undoToast,setUndoToast]=useState(null) // {id, title, timer}
   const [confirmArchive,setConfirmArchive]=useState(null) // {id, title}
@@ -801,7 +805,23 @@ export default function Tasks({ user }) {
 
   const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st))}
   const addPhase=()=>{if(!newPhase.trim())return;const key=newPhase.trim().toLowerCase().replace(/\s+/g,'-');if(statuses.find(s=>s.key===key))return;const used=statuses.map(s=>s.color);const color=COLORS.find(c=>!used.includes(c))||COLORS[0];saveStatuses([...statuses,{key,label:newPhase.trim(),color}]);setNewPhase('')}
-  const removePhase=key=>{if(statuses.length<=2)return;saveStatuses(statuses.filter(s=>s.key!==key));tasks.filter(t=>t.status===key).forEach(async t=>{await api.save('tasks',{...t,status:statuses[0].key});reload()})}
+  const removePhase=key=>{
+    if(statuses.length<=2)return
+    const affected=tasks.filter(t=>t.status===key)
+    if(affected.length>0){
+      const st=statuses.find(s=>s.key===key)
+      setConfirmMigratePhase({key,label:st?.label||key,taskCount:affected.length})
+    } else {
+      saveStatuses(statuses.filter(s=>s.key!==key))
+    }
+  }
+  const doRemovePhase=async(fromKey,toKey)=>{
+    const affected=tasks.filter(t=>t.status===fromKey)
+    for(const t of affected){ await api.save('tasks',{...t,status:toKey}) }
+    saveStatuses(statuses.filter(s=>s.key!==fromKey))
+    setConfirmMigratePhase(null)
+    reload()
+  }
 
   useEffect(()=>{reload()},[])
   const reload=()=>api.getAll('tasks').then(setTasks)
@@ -883,7 +903,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={ns=>draggedId&&updateStatus(draggedId,ns)} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId}/>))}
             </div>
           ):view==='archief'?(
             archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:
@@ -916,6 +936,37 @@ export default function Tasks({ user }) {
           <span>📦 "{undoToast.title.slice(0,30)}{undoToast.title.length>30?'…':''}" gearchiveerd</span>
           <button onClick={undoArchive} style={{background:'#fff',color:'rgba(28,25,23,0.9)',border:'none',borderRadius:'6px',padding:'0.3rem 0.75rem',cursor:'pointer',fontWeight:700,fontSize:'0.78rem',fontFamily:'var(--font-body)'}}>Ongedaan</button>
           <button onClick={()=>{clearTimeout(undoToast.timer);setUndoToast(null)}} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',cursor:'pointer',fontSize:'0.75rem',padding:'0.1rem'}}>✕</button>
+        </div>
+      )}
+
+      {/* Fase verwijderen — migratie modal */}
+      {confirmMigratePhase&&(
+        <div className="modal-overlay" onClick={()=>setConfirmMigratePhase(null)}>
+          <div className="modal" style={{maxWidth:'420px'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Fase verwijderen</h3>
+              <button className="modal-close" onClick={()=>setConfirmMigratePhase(null)}>✕</button>
+            </div>
+            <p style={{fontSize:'0.85rem',color:'var(--text-secondary)',marginBottom:'1rem'}}>
+              De fase <strong>"{confirmMigratePhase.label}"</strong> heeft nog <strong>{confirmMigratePhase.taskCount} taken</strong>.
+              Waar wil je deze taken naartoe verplaatsen?
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',marginBottom:'1.25rem'}}>
+              {statuses.filter(s=>s.key!==confirmMigratePhase.key).map(s=>(
+                <button key={s.key} onClick={()=>doRemovePhase(confirmMigratePhase.key,s.key)}
+                  style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1rem',borderRadius:'10px',border:'1px solid var(--border)',background:'var(--bg-secondary)',cursor:'pointer',textAlign:'left',transition:'all 0.15s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=s.color;e.currentTarget.style.background='var(--bg-card)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='var(--bg-secondary)'}}>
+                  <span style={{width:'10px',height:'10px',borderRadius:'50%',background:s.color,flexShrink:0}}/>
+                  <span style={{fontWeight:600,fontSize:'0.85rem'}}>{s.label}</span>
+                  <span style={{fontSize:'0.75rem',color:'var(--text-secondary)',marginLeft:'auto'}}>Verplaats {confirmMigratePhase.taskCount} taken hiernaartoe →</span>
+                </button>
+              ))}
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-outline" onClick={()=>setConfirmMigratePhase(null)}>Annuleren</button>
+            </div>
+          </div>
         </div>
       )}
 
