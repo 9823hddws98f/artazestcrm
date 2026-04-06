@@ -107,7 +107,7 @@ export async function seedData(api) {
 
   if (existingInv.length === 0) {
     const withIds = SEED_INVENTORY.map((item, i) => ({
-      ...item, id: 'seed-inventory-' + i, createdAt: new Date().toISOString()
+      ...item, id: 'seed-inventory-' + i
     }))
     for (const item of withIds) { await api.save('inventory', item) }
     console.log('✓ Voorraad geseeded:', withIds.length)
