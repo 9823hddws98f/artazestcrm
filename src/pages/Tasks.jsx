@@ -1135,9 +1135,6 @@ export default function Tasks({ user }) {
     <>
       <div className="page-header" style={{alignItems:'flex-start'}}>
         <div><h1>To-do's</h1>
-          <p className="page-subtitle">{counts.todo} to do · {counts.gepland} gepland · {counts.bezig} in uitvoering · {counts.klaar} klaar
-            {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
-          </p>
         </div>
         <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem',flex:1}}>
           <DagelijkseCheckinsCompact/>
@@ -1212,6 +1209,12 @@ export default function Tasks({ user }) {
             <button onClick={()=>setShowAddProject(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem'}}>✕</button>
           </div>
         )}
+      </div>
+
+      {/* Teller onder projectbalk */}
+      <div style={{fontSize:'0.78rem',color:'var(--text-secondary)',marginBottom:'0.75rem',display:'flex',alignItems:'center',gap:'0.5rem'}}>
+        <span>{counts.todo} to do · {counts.gepland} gepland · {counts.bezig} in uitvoering · {counts.klaar} klaar</span>
+        {daysToLaunch>0&&<span style={{padding:'0.12rem 0.5rem',borderRadius:'99px',fontSize:'0.72rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
       </div>
 
       {showPhaseEdit&&(<div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem'}}>
