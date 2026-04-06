@@ -97,7 +97,7 @@ function DagelijkseCheckins() {
 }
 
 
-function Timeline({ tasks, onDropDay, draggedId }) {
+function Timeline({ tasks, onDropDay, draggedId, onTaskClick }) {
   const today = new Date(); today.setHours(0,0,0,0)
   const DAYS = 14
   const DAY_W = 56
@@ -202,7 +202,7 @@ function Timeline({ tasks, onDropDay, draggedId }) {
                     onMouseEnter={e=>setTooltip({title:task.title,x:e.clientX,y:e.clientY})}
                     onMouseMove={e=>setTooltip(t=>t?{...t,x:e.clientX,y:e.clientY}:null)}
                     onMouseLeave={()=>setTooltip(null)}
-                    style={{position:'absolute',left:`${leftPct}%`,width:`calc(${widthPct}% - 3px)`,top:topPx,height:BAR_H,borderRadius:'3px',background:color,opacity:0.82,cursor:'default',overflow:'hidden',display:'flex',alignItems:'center',paddingLeft:'4px'}}>
+                    onClick={()=>onTaskClick&&onTaskClick(task)} style={{position:'absolute',left:`${leftPct}%`,width:`calc(${widthPct}% - 3px)`,top:topPx,height:BAR_H,borderRadius:'3px',background:color,opacity:0.82,cursor:'pointer',overflow:'hidden',display:'flex',alignItems:'center',paddingLeft:'4px',transition:'opacity 0.1s',zIndex:2}} onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.25)'}} onMouseLeave={e=>{e.currentTarget.style.opacity='0.82';e.currentTarget.style.boxShadow='none'}}>
                     {subPct!==null&&subPct>0&&(
                       <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${subPct}%`,background:'rgba(255,255,255,0.22)',borderRadius:'3px 0 0 3px'}}/>
                     )}
@@ -502,7 +502,7 @@ export default function Tasks({ user }) {
       </div>
 
       <DagelijkseCheckins/>
-      <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId}/>
+      <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit}/>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
         <div className="tabs" style={{marginBottom:0,borderBottom:'none'}}>{views.map(v=><button key={v.key} className={`tab ${view===v.key?'active':''}`} onClick={()=>setView(v.key)}>{v.label}</button>)}</div>
