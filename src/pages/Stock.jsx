@@ -97,7 +97,7 @@ export default function Stock() {
                   <div style={{fontWeight:600,fontSize:'0.88rem',marginBottom:'0.1rem'}}>{art.name}</div>
                   <div style={{display:'flex',alignItems:'center',gap:'0.3rem'}}>
                     <span style={{width:'10px',height:'10px',borderRadius:'50%',background:COLOR_HEX[art.primaryColor],border:'1px solid rgba(0,0,0,0.1)',flexShrink:0}}/>
-                    <span style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>{art.primaryColor}</span>
+                    <span style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>{brandName(art.primaryColor)}</span>
                   </div>
                 </div>
 
@@ -129,6 +129,7 @@ export default function Stock() {
                           <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginBottom:'0.35rem'}}>
                             <span style={{width:'12px',height:'12px',borderRadius:'50%',background:COLOR_HEX[color],border:'1px solid rgba(0,0,0,0.1)',flexShrink:0}}/>
                             <span style={{fontSize:'0.75rem',fontWeight:isPrimary?700:500}}>{brandName(color)}</span>
+                            <span style={{fontSize:'0.58rem',color:'var(--text-secondary)',fontWeight:400}}>({color})</span>
                             {isPrimary && <span style={{fontSize:'0.55rem',padding:'0.05rem 0.25rem',borderRadius:'99px',background:COLOR_HEX[color],color:color==='White'||color==='Light tan'||color==='Beige'?'#1C1917':'#fff',fontWeight:700,marginLeft:'auto'}}>primair</span>}
                           </div>
                           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'0.4rem'}}>
