@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
+import { ARTAZEST_COLORS, brandName, colorHex, colorKeys } from '../colors'
 
-const PANEL_COLORS = ['Black','Beige','Grey','Light tan','White','Green','Blue']
-const COLOR_HEX = { Black:'#1C1917', Beige:'#D4C5A9', Grey:'#9CA3AF', 'Light tan':'#E8DCCC', White:'#F5F5F4', Green:'#6B8E6B', Blue:'#4A6FA5' }
+const PANEL_COLORS = colorKeys
+const COLOR_HEX = Object.fromEntries(ARTAZEST_COLORS.map(c => [c.key, c.hex]))
 
 export default function Stock() {
   const [artworks, setArtworks] = useState([])
@@ -63,7 +64,7 @@ export default function Stock() {
               style={{padding:'0.4rem 0.6rem',borderRadius:'6px',border:'1px solid var(--border)',fontSize:'0.8rem',fontFamily:'var(--font-body)'}}/>
             <select value={form.primaryColor} onChange={e=>setForm({...form,primaryColor:e.target.value})}
               style={{padding:'0.4rem',borderRadius:'6px',border:'1px solid var(--border)',fontSize:'0.8rem',fontFamily:'var(--font-body)'}}>
-              {PANEL_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+              {PANEL_COLORS.map(c=><option key={c} value={c}>{brandName(c)}</option>)}
             </select>
           </div>
           <div style={{display:'flex',gap:'0.4rem',justifyContent:'flex-end'}}>
@@ -127,7 +128,7 @@ export default function Stock() {
                         <div key={color} style={{padding:'0.5rem',borderRadius:'8px',border:`1.5px solid ${isPrimary?COLOR_HEX[color]+'80':'var(--border)'}`,background:'var(--bg-card)'}}>
                           <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginBottom:'0.35rem'}}>
                             <span style={{width:'12px',height:'12px',borderRadius:'50%',background:COLOR_HEX[color],border:'1px solid rgba(0,0,0,0.1)',flexShrink:0}}/>
-                            <span style={{fontSize:'0.75rem',fontWeight:isPrimary?700:500}}>{color}</span>
+                            <span style={{fontSize:'0.75rem',fontWeight:isPrimary?700:500}}>{brandName(color)}</span>
                             {isPrimary && <span style={{fontSize:'0.55rem',padding:'0.05rem 0.25rem',borderRadius:'99px',background:COLOR_HEX[color],color:color==='White'||color==='Light tan'||color==='Beige'?'#1C1917':'#fff',fontWeight:700,marginLeft:'auto'}}>primair</span>}
                           </div>
                           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'0.4rem'}}>
@@ -146,7 +147,7 @@ export default function Stock() {
                       style={{flex:1,minWidth:'150px',padding:'0.3rem 0.5rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.72rem',fontFamily:'var(--font-body)',background:'var(--bg-card)'}}/>
                     <select value={art.primaryColor} onChange={e=>updateField(art.id,'primaryColor',e.target.value)}
                       style={{padding:'0.3rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.72rem',fontFamily:'var(--font-body)',background:'var(--bg-card)'}}>
-                      {PANEL_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+                      {PANEL_COLORS.map(c=><option key={c} value={c}>{brandName(c)}</option>)}
                     </select>
                     <button onClick={()=>{if(confirm(`"${art.name}" verwijderen?`))removeArtwork(art.id)}}
                       style={{padding:'0.3rem 0.5rem',borderRadius:'4px',border:'1px solid #DC2626',background:'none',color:'#DC2626',cursor:'pointer',fontSize:'0.68rem',fontWeight:600}}>Verwijder</button>
