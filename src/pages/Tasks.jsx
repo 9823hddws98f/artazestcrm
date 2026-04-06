@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 
+// Module-level — nooit stale, werkt buiten React render cycle
+let _DRAG_ID = null
+
 const ASSIGNEES = ['Tein','Sam']
 const ALL_ASSIGNEES = ['Tein','Sam','Productie']
 const LAUNCH = new Date('2026-04-18T09:00:00')
@@ -474,7 +477,7 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
               <div key={iso}
                 onDragOver={e=>{e.preventDefault();if(!dragging)setOverDay(iso)}}
                 onDragLeave={()=>setOverDay(null)}
-                onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId&&!dragging)onDropDay(draggedId,iso)}}
+                onDrop={e=>{e.preventDefault();setOverDay(null);const _tid=_DRAG_ID||draggedId; if(_tid&&!dragging){onDropDay(_tid,iso);_DRAG_ID=null}}}
                 style={{flex:1,padding:'0.28rem 0.1rem',textAlign:'center',borderRight:i<DAYS-1?'1px solid var(--border)':undefined,background:isOver?'#DBEAFE':isToday?'#FFF7ED':isLaunch?'#FEF3C7':isWeekend?'rgba(0,0,0,0.025)':'transparent',cursor:'default',position:'relative'}}>
                 <div style={{fontSize:'0.52rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isLaunch?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',lineHeight:1}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
                 <div style={{fontSize:'0.72rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#D97706':'var(--text-primary)',lineHeight:1.25}}>{day.getDate()}</div>
@@ -602,7 +605,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
           e.preventDefault()
           setIsOver(false)
           if(internalDragIdx!==null){handleInternalDrop(ordered.length);return}
-          if(draggedId)onDropToday(draggedId)
+          const _vid = _DRAG_ID||draggedId; if(_vid){onDropToday(_vid);_DRAG_ID=null}
         }}
         className="card"
         style={{borderTop:'3px solid #D97706',position:'sticky',top:'1rem',maxHeight:'calc(100vh - 180px)',overflowY:'auto',background:isOver?'#FFFBF0':'var(--bg-card)',outline:isOver&&internalDragIdx===null?'2px dashed #D97706':'none',outlineOffset:'2px',transition:'all 0.1s'}}>
@@ -699,7 +702,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   if (compact) {
     return (
       <div draggable={isDraggable}
-        onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);onDragStart&&onDragStart()}}}
+        onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);_DRAG_ID=t.id;onDragStart&&onDragStart()}}}
         onDragEnd={()=>onDragEnd&&onDragEnd()}
         onClick={onClick}
         style={{padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'grab',background:'var(--bg-card)',marginBottom:'0.28rem',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,userSelect:'none'}}
@@ -727,7 +730,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
 
   return (
     <div draggable={isDraggable}
-      onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);onDragStart&&onDragStart()}}}
+      onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);_DRAG_ID=t.id;onDragStart&&onDragStart()}}}
       onDragEnd={()=>onDragEnd&&onDragEnd()}
       onClick={onClick}
       style={{padding:'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
@@ -798,7 +801,7 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
         onDrop={e=>{
           e.preventDefault(); e.stopPropagation()
           // Pak id via dataTransfer (meest betrouwbaar), dan ref, dan prop
-          const id = e.dataTransfer.getData('text/plain') || draggedIdRef.current || draggedId
+          const id = _DRAG_ID || e.dataTransfer.getData('text/plain') || draggedIdRef.current || draggedId
           const idx = getDropIndex(e)
           setDropIdx(null)
           if (!id) return
@@ -1240,7 +1243,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);_DRAG_ID=null}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)}/>))}
             </div>
           ):view==='archief'?(
             view==='kalender' ? <KalenderView tasks={filtered} onTaskClick={startEdit} onAddTask={(date)=>{resetForm();setForm(f=>({...f,dueDate:date}));setShowAdd(true)}}/> :
