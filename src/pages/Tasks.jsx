@@ -366,7 +366,7 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
     const d = new Date(iso); d.setDate(d.getDate()+n); return toISO(d)
   }
 
-  const ganttTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && (t.plannedDate||t.dueDate))
+  const ganttTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && t.plannedDate)
 
   const getTrack = (laneTasks, taskIdx) => {
     const t = laneTasks[taskIdx]
@@ -498,8 +498,8 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
 
               {/* Bars */}
               {laneTasks.map((task,ti)=>{
-                const si=Math.max(0,dayIdx(task.plannedDate||task.dueDate))
-                const ei=Math.min(DAYS-1,dayIdx(task.dueDate||task.plannedDate))
+                const si=Math.max(0,dayIdx(task.plannedDate))
+                const ei=task.dueDate?Math.min(DAYS-1,dayIdx(task.dueDate)):si
                 if(si>DAYS-1||ei<0) return null
                 const track=getTrack(laneTasks,ti)
                 const color=task.priority==='high'?'#DC2626':statusColor[task.status]||'#9CA3AF'
@@ -531,7 +531,7 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
                   </div>
                 )
               })}
-              {laneTasks.length===0&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',paddingLeft:'8px'}}><span style={{fontSize:'0.63rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Geen geplande taken</span></div>}
+              {laneTasks.length===0&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',paddingLeft:'8px'}}><span style={{fontSize:'0.63rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Leeg — sleep een taak hierheen</span></div>}
             </div>
           </div>
         )
