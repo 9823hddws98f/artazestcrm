@@ -19,10 +19,9 @@ export default function App() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    seedData()
-    api.migrateFromLocalStorage()
     const u = auth.getUser()
     if (u) setUser(u)
+    seedData(api).catch(console.warn)
   }, [])
   const handleLogin = () => {
     const u = auth.login(loginName, pin)

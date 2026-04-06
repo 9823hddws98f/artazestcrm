@@ -63,63 +63,58 @@ const SEED_TASKS = [
     { id: 'st-20c', title: '5x Blue sample', completed: false },
     { id: 'st-20d', title: 'Verpakken in sample mapje', completed: false },
   ]},
-];
+]
+
 const SEED_INVENTORY = [
   { name: 'White', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Black', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Blue', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Green', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Grey', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Light tan', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [{qty:120,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Beige', section: 'panelen', quantity: 130, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 130, batches: [{qty:130,date:'2025-11-15',note:'Eerste voorraad'}] },
-  { name: 'Houten lijst', section: 'lijst', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
-  { name: 'Knopje', section: 'lijst', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Ophangbeugel' },
-  { name: 'Verzenddozen', section: 'karton', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen' },
-  { name: 'Custom plakband', section: 'karton', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded' },
-  { name: 'Product boekje', section: 'drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Sample folder', section: 'drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden' },
-  { name: 'Sample set (5 kleuren)', section: 'samples', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '' },
-  { name: 'Losse samples', section: 'samples', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '' },
-  { name: 'CNC freeswerk', section: 'cnc', quantity: 0, minStock: 0, leadTimeDays: 0, supplier: '', notes: 'Nog uitzoeken' },
-];
-const SEED_ARTWORK = [
-  { name: 'Artwork 1', stage: 'foto', colors: ['Oak','Walnut','Black','White','Forest','Natural'], designer: '', notes: 'Fotoselectie — 45 shots' },
-  { name: 'Artwork 2', stage: 'design', colors: ['Oak','Walnut','Black'], designer: '', notes: 'Nieuw design' },
-  { name: 'Artwork 3', stage: 'design', colors: [], designer: '', notes: 'Concept fase' },
-];
+  { name: 'Black', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [] },
+  { name: 'Blue', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [] },
+  { name: 'Green', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [] },
+  { name: 'Grey', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [] },
+  { name: 'Light tan', section: 'panelen', quantity: 120, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 120, batches: [] },
+  { name: 'Beige', section: 'panelen', quantity: 130, minStock: 30, leadTimeDays: 90, supplier: '', notes: '', startStock: 130, batches: [] },
+  { name: 'Houten lijst', section: 'lijst', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '', startStock: 0, batches: [] },
+  { name: 'Knopje', section: 'lijst', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Ophangbeugel', startStock: 0, batches: [] },
+  { name: 'Verzenddozen', section: 'karton', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: 'Nog bestellen', startStock: 0, batches: [] },
+  { name: 'Custom plakband', section: 'karton', quantity: 20, minStock: 10, leadTimeDays: 14, supplier: '', notes: 'Branded', startStock: 20, batches: [] },
+  { name: 'Product boekje', section: 'drukwerk', quantity: 0, minStock: 100, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden', startStock: 0, batches: [] },
+  { name: 'Sample folder', section: 'drukwerk', quantity: 0, minStock: 50, leadTimeDays: 10, supplier: '', notes: 'Ontwerp afronden', startStock: 0, batches: [] },
+  { name: 'Sample set (5 kleuren)', section: 'samples', quantity: 0, minStock: 20, leadTimeDays: 14, supplier: '', notes: '', startStock: 0, batches: [] },
+  { name: 'Losse samples', section: 'samples', quantity: 0, minStock: 50, leadTimeDays: 7, supplier: '', notes: '', startStock: 0, batches: [] },
+]
+
 const SEED_SETTINGS = {
   roles: {
     Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/catalog', '/analytics', '/settings'] },
     Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
     Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
   }
-};
-export function seedData() {
-  const V = 'v8'
-  const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK }
-  const curV = localStorage.getItem('artazest_seed_version')
-  for (const [store, items] of Object.entries(stores)) {
-    const existing = localStorage.getItem('artazest_' + store)
-    if (existing && JSON.parse(existing).length > 0 && curV === V) continue
-    const withIds = items.map((item, i) => ({ ...item, id: 'seed-' + store + '-' + i, createdAt: new Date().toISOString() }))
-    localStorage.setItem('artazest_' + store, JSON.stringify(withIds))
-  }
-  if (!localStorage.getItem('artazest_settings') || curV !== V) {
-    localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
-  }
-  // Reset statuses naar default (verwijdert eventuele garbage zoals 'knk')
-  if (curV !== V) {
-    localStorage.setItem('artazest_statuses', JSON.stringify([
-      { key: 'todo', label: 'To do', color: '#78716C' },
-      { key: 'gepland', label: 'Gepland', color: '#2563EB' },
-      { key: 'bezig', label: 'Bezig', color: '#D97706' },
-      { key: 'klaar', label: 'Klaar', color: '#059669' },
-    ]))
-  }
-  localStorage.setItem('artazest_seed_version', V)
+}
 
-  if (!localStorage.getItem('artazest_investments')) {
-    localStorage.setItem('artazest_investments', JSON.stringify([
+export async function seedData(api) {
+  // Check of Supabase al data heeft
+  const existingTasks = await api.getAll('tasks')
+  const existingInv = await api.getAll('inventory')
+  const existingInv2 = await api.getAll('investments')
+
+  if (existingTasks.length === 0) {
+    const withIds = SEED_TASKS.map((item, i) => ({
+      ...item, id: 'seed-tasks-' + i, createdAt: new Date().toISOString()
+    }))
+    for (const item of withIds) { await api.save('tasks', item) }
+    console.log('✓ Taken geseeded:', withIds.length)
+  }
+
+  if (existingInv.length === 0) {
+    const withIds = SEED_INVENTORY.map((item, i) => ({
+      ...item, id: 'seed-inventory-' + i, createdAt: new Date().toISOString()
+    }))
+    for (const item of withIds) { await api.save('inventory', item) }
+    console.log('✓ Voorraad geseeded:', withIds.length)
+  }
+
+  if (existingInv2.length === 0) {
+    const investments = [
       { id: 'inv-001', description: 'Eerste voorraad platen (850 st)', category: 'voorraad', amount: 25000, date: '2025-11-15', notes: '850 akoestische platen' },
       { id: 'inv-002', description: 'CNC-machine', category: 'productie', amount: 15000, date: '2025-12-20', notes: '' },
       { id: 'inv-003', description: 'Lijsten 60x60cm red oak (50st)', category: 'productie', amount: 2400, date: '2025-03-30', notes: '50x $24 x2' },
@@ -130,6 +125,23 @@ export function seedData() {
       { id: 'inv-006', description: 'Merknaam registratie', category: 'juridisch', amount: 450, date: '2025-10-05', notes: 'BOIP Benelux' },
       { id: 'inv-007', description: 'Logo & identiteit', category: 'branding', amount: 1800, date: '2025-09-20', notes: '' },
       { id: 'inv-008', description: 'Verpakkingsdesign', category: 'branding', amount: 600, date: '2026-01-25', notes: '' },
+    ]
+    for (const item of investments) { await api.save('investments', item) }
+    console.log('✓ Investeringen geseeded:', investments.length)
+  }
+
+  // Statuses & settings blijven in localStorage
+  const curV = localStorage.getItem('artazest_seed_version')
+  if (curV !== 'v8') {
+    localStorage.setItem('artazest_statuses', JSON.stringify([
+      { key: 'todo', label: 'To do', color: '#78716C' },
+      { key: 'gepland', label: 'Gepland', color: '#2563EB' },
+      { key: 'bezig', label: 'Bezig', color: '#D97706' },
+      { key: 'klaar', label: 'Klaar', color: '#059669' },
     ]))
+    localStorage.setItem('artazest_seed_version', 'v8')
+  }
+  if (!localStorage.getItem('artazest_settings')) {
+    localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
   }
 }
