@@ -127,11 +127,12 @@ function WekelijkseTodos() {
 // ─── DAGELIJKSE CHECK-INS (COMPACT — naast header) ──────────────────────────
 function DagelijkseCheckinsCompact() {
   const today = new Date().toISOString().slice(0,10)
-  const load = () => JSON.parse(localStorage.getItem('artazest_checkins') || '[]')
+  const load = () => { try { return JSON.parse(localStorage.getItem('artazest_checkins') || '[]') } catch { return [] } }
   const save = items => localStorage.setItem('artazest_checkins', JSON.stringify(items))
   const [items, setItems] = useState(load)
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
+  const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
   const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
   const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
   const isChecked = item => item.checkedDate === today
@@ -141,79 +142,136 @@ function DagelijkseCheckinsCompact() {
   const remove = id => { const u = items.filter(i=>i.id!==id); save(u); setItems(u) }
   const add = () => {
     if (!form.name.trim()) return
-    const u = [...items, {...form, id:`ci-${Date.now()}`, checkedDate:null}]
+    const u = [...items, {...form, id:`ci-${Date.now()}`, checkedDate:null, status:'', notif:true}]
     save(u); setItems(u); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
   }
+  const updateStatus = (id, val) => {
+    const u = items.map(i => i.id===id ? {...i, status:val} : i)
+    save(u); setItems(u)
+  }
+  const toggleNotif = (id) => {
+    const u = items.map(i => i.id===id ? {...i, notif: !i.notif} : i)
+    save(u); setItems(u)
+    // Vraag notificatie toestemming als nodig
+    if (Notification && Notification.permission === 'default') Notification.requestPermission()
+  }
 
-  const [showPanel, setShowPanel] = useState(false)
+  // Dagelijkse notificatie check
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0,10)
+    const lastNotif = localStorage.getItem('artazest_checkin_notif_date')
+    if (lastNotif === today) return // Vandaag al gedaan
+    
+    const notifItems = items.filter(i => i.notif !== false && !isChecked(i))
+    if (notifItems.length === 0) return
+    
+    // Vraag toestemming en stuur notificatie
+    const sendNotif = () => {
+      if (Notification.permission === 'granted') {
+        notifItems.forEach(item => {
+          new Notification(`Check-in: ${item.name}`, {
+            body: item.topic ? `Vergeet niet te checken over: ${item.topic}` : `Heb je al contact gehad met ${item.name}?`,
+            icon: '/favicon.ico',
+            tag: `checkin-${item.id}`
+          })
+        })
+        localStorage.setItem('artazest_checkin_notif_date', today)
+      }
+    }
+    
+    if (Notification && Notification.permission === 'default') {
+      Notification.requestPermission().then(p => { if (p === 'granted') sendNotif() })
+    } else if (Notification && Notification.permission === 'granted') {
+      // Stuur na 2 sec zodat de pagina geladen is
+      setTimeout(sendNotif, 2000)
+    }
+  }, [])
 
   return (
-    <div style={{position:'relative'}}>
-      {/* Trigger knop */}
-      <button onClick={()=>setShowPanel(!showPanel)}
-        style={{display:'flex',alignItems:'center',gap:'0.35rem',padding:'0.35rem 0.75rem',borderRadius:'8px',border:'1px solid var(--border)',background:doneCount===items.length&&items.length>0?'#F0FDF4':'var(--bg-card)',cursor:'pointer',fontSize:'0.78rem',fontWeight:600,color:'var(--text-primary)',transition:'all 0.15s'}}>
-        <span>✓</span>
-        <span>Check-ins</span>
-        <span style={{background:doneCount===items.length&&items.length>0?'#059669':'var(--bg-secondary)',color:doneCount===items.length&&items.length>0?'#fff':'var(--text-secondary)',borderRadius:'99px',padding:'0.05rem 0.4rem',fontSize:'0.65rem',fontWeight:700}}>{doneCount}/{items.length}</span>
-      </button>
+    <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',minWidth:'260px',maxWidth:'320px'}}>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.1rem'}}>
+        <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>
+          Check-ins <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)',fontWeight:700}}>{doneCount}/{items.length}</span>
+        </span>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+ persoon</button>
+      </div>
 
-      {/* Dropdown panel */}
-      {showPanel && (
-        <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'12px',boxShadow:'0 8px 24px rgba(0,0,0,0.12)',padding:'0.75rem',minWidth:'240px',maxHeight:'340px',overflowY:'auto'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.6rem'}}>
-            <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Dagelijkse check-ins</span>
-            <button onClick={()=>setShowPanel(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
-          </div>
-
-          {/* Verticale lijst */}
-          <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',marginBottom:'0.5rem'}}>
-            {items.map(item => {
-              const done = isChecked(item)
-              return (
-                <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.4rem 0.5rem',borderRadius:'8px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-secondary)',cursor:'pointer',transition:'all 0.15s'}}
-                  onClick={()=>toggle(item.id)}>
-                  {/* Checkbox */}
-                  <div style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s'}}>
-                    {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
-                  </div>
-                  {/* Info */}
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:'0.8rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none'}}>{item.name}</div>
-                    <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{viaIcon[item.via]||'👤'} {item.via}{item.topic?` · ${item.topic}`:''}</div>
-                  </div>
-                  <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.7rem',padding:'0.1rem',flexShrink:0}}
-                    onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+      {/* Personen verticaal */}
+      {items.map(item => {
+        const done = isChecked(item)
+        return (
+          <div key={item.id}
+            style={{padding:'0.45rem 0.55rem',borderRadius:'8px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',transition:'all 0.15s'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+              {/* Checkbox */}
+              <div onClick={()=>toggle(item.id)}
+                style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,cursor:'pointer',transition:'all 0.15s'}}>
+                {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
+              </div>
+              {/* Naam + via */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.8rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {viaIcon[item.via]||'👤'} {item.name}
+                  {item.topic && <span style={{fontSize:'0.65rem',color:'var(--text-secondary)',fontWeight:400,marginLeft:'0.3rem'}}>· {item.topic}</span>}
                 </div>
-              )
-            })}
-          </div>
-
-          {/* Toevoegen */}
-          {!showAdd ? (
-            <button onClick={()=>setShowAdd(true)} style={{width:'100%',padding:'0.35rem',borderRadius:'8px',border:'1.5px dashed var(--border)',background:'transparent',cursor:'pointer',fontSize:'0.75rem',color:'var(--text-secondary)',fontWeight:500,textAlign:'center'}}>+ Persoon toevoegen</button>
-          ) : (
-            <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',padding:'0.5rem',borderRadius:'8px',border:'1px solid var(--accent)',background:'var(--accent-light)'}}>
-              <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam..." className="form-input" style={{fontSize:'0.78rem',padding:'0.3rem 0.5rem'}}/>
-              <div style={{display:'flex',gap:'0.3rem'}}>
-                <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} className="form-select" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem',flex:1}}>
-                  {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
-                </select>
               </div>
-              <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Waarover... (optioneel)" className="form-input" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}/>
-              <div style={{display:'flex',gap:'0.3rem'}}>
-                <button onClick={add} className="btn btn-primary" style={{flex:1,fontSize:'0.72rem',padding:'0.3rem'}}>+ Toevoegen</button>
-                <button onClick={()=>setShowAdd(false)} className="btn btn-outline" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}>✕</button>
-              </div>
+              {/* Notificatie toggle */}
+              <button onClick={()=>toggleNotif(item.id)} title={item.notif!==false?'Notificatie aan':'Notificatie uit'}
+                style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:item.notif!==false?'#D97706':'var(--text-secondary)',padding:'0',flexShrink:0}}>
+                {item.notif!==false?'🔔':'🔕'}
+              </button>
+              {/* Verwijder */}
+              <button onClick={()=>remove(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem',padding:'0',flexShrink:0,opacity:0.4}}
+                onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.4'}>×</button>
             </div>
-          )}
+
+            {/* Status — "is nu bezig met..." */}
+            <div style={{marginTop:'0.25rem',paddingLeft:'1.4rem'}} onClick={e=>e.stopPropagation()}>
+              {editStatus===item.id ? (
+                <input autoFocus
+                  value={item.status||''}
+                  onChange={e=>updateStatus(item.id, e.target.value)}
+                  onBlur={()=>setEditStatus(null)}
+                  onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
+                  placeholder="Is nu bezig met..."
+                  style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.72rem',outline:'none',color:'var(--text-primary)',fontFamily:'var(--font-body)',padding:'0.1rem 0'}}/>
+              ) : (
+                <div onClick={()=>setEditStatus(item.id)}
+                  style={{fontSize:'0.72rem',color:item.status?'var(--text-primary)':'var(--text-secondary)',fontStyle:item.status?'normal':'italic',cursor:'text',minHeight:'1rem'}}>
+                  {item.status || 'Klik om status toe te voegen...'}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Toevoeg form */}
+      {showAdd && (
+        <div style={{padding:'0.5rem',borderRadius:'8px',border:'1px dashed var(--accent)',background:'var(--accent-light)',display:'flex',flexDirection:'column',gap:'0.3rem'}}>
+          <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
+            placeholder="Naam..." className="form-input" style={{fontSize:'0.78rem',padding:'0.3rem 0.5rem'}}/>
+          <div style={{display:'flex',gap:'0.3rem'}}>
+            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} className="form-select" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem',flex:1}}>
+              {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
+            </select>
+          </div>
+          <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
+            placeholder="Onderwerp (optioneel)" className="form-input" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}/>
+          <div style={{display:'flex',gap:'0.3rem'}}>
+            <button onClick={add} className="btn btn-primary" style={{flex:1,fontSize:'0.72rem',padding:'0.3rem'}}>+ Toevoegen</button>
+            <button onClick={()=>setShowAdd(false)} className="btn btn-outline" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}>✕</button>
+          </div>
         </div>
+      )}
+
+      {items.length===0&&!showAdd&&(
+        <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.25rem 0'}}>Voeg mensen toe die je dagelijks checkt</div>
       )}
     </div>
   )
 }
-
-// ─── DAGELIJKSE CHECK-INS ───────────────────────────────────────────────────
-const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
 
 function DagelijkseCheckins() {
   const today = new Date().toISOString().slice(0,10)
@@ -788,16 +846,18 @@ export default function Tasks({ user }) {
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header" style={{alignItems:'flex-start'}}>
         <div><h1>To-do's</h1>
           <p className="page-subtitle">{counts.todo} to do · {counts.gepland} gepland · {counts.bezig} in uitvoering · {counts.klaar} klaar
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+        <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem',flex:1}}>
           <DagelijkseCheckinsCompact/>
-          <WekelijkseTodos/>
-          <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
+          <div style={{display:'flex',gap:'0.4rem',flexShrink:0,paddingTop:'0.05rem'}}>
+            <WekelijkseTodos/>
+            <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
+          </div>
         </div>
       </div>
 
