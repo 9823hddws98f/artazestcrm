@@ -113,6 +113,37 @@ export async function seedData(api) {
     console.log('✓ Voorraad geseeded:', withIds.length)
   }
 
+  // Seed content als leeg
+  const existingContent = await api.getAll('content')
+  if (existingContent.length === 0) {
+    const contentItems = [
+      { id: 'cnt-01', title: 'Hero shot White paneel — lifestyle woonkamer', type: 'Instagram post', status: 'productie', assignee: 'Sam', dueDate: '2026-04-08', notes: '45-shot selectie, lichte ruimte', priority: 'high' },
+      { id: 'cnt-02', title: 'Texture close-up Black paneel', type: 'Instagram post', status: 'concept', assignee: 'Sam', dueDate: '2026-04-09', notes: 'Detail shot vilt structuur', priority: 'normal' },
+      { id: 'cnt-03', title: 'Kleurenvergelijking alle 7 kleuren', type: 'Instagram post', status: 'idee', assignee: 'Sam', dueDate: '2026-04-10', notes: 'Flatlay alle kleuren naast elkaar', priority: 'high' },
+      { id: 'cnt-04', title: 'Productie behind the scenes (CNC)', type: 'Instagram reel', status: 'idee', assignee: 'Tein', dueDate: '2026-04-12', notes: 'CNC freesproces filmen', priority: 'normal' },
+      { id: 'cnt-05', title: 'Over ons pagina tekst', type: 'Blog artikel', status: 'concept', assignee: 'Sam', dueDate: '2026-04-12', notes: 'Het verhaal achter Artazest', priority: 'high' },
+      { id: 'cnt-06', title: 'FAQ pagina content', type: 'Blog artikel', status: 'idee', assignee: 'Sam', dueDate: '2026-04-13', notes: 'Top 10 vragen', priority: 'normal' },
+      { id: 'cnt-07', title: 'Welcome email serie (3 mails)', type: 'Email', status: 'idee', assignee: 'Sam', dueDate: '2026-04-14', notes: 'Klaviyo welcome flow', priority: 'high' },
+      { id: 'cnt-08', title: 'Launch announcement email', type: 'Email', status: 'idee', assignee: 'Sam', dueDate: '2026-04-17', notes: 'Naar waitlist sturen op launch dag', priority: 'high' },
+      { id: 'cnt-09', title: 'Ocean Blue lifestyle shot thuiskantoor', type: 'Instagram post', status: 'idee', assignee: 'Sam', dueDate: '2026-04-11', notes: 'Kantoor/werkplek setting', priority: 'normal' },
+      { id: 'cnt-10', title: 'Launch dag Instagram grid (3 posts)', type: 'Instagram post', status: 'idee', assignee: 'Sam', dueDate: '2026-04-18', notes: 'Launch day content — 3 posts tegelijk', priority: 'high' },
+    ]
+    for (const item of contentItems) { await api.save('content', item) }
+    console.log('✓ Content geseeded:', contentItems.length)
+  }
+
+  // Seed catalog als leeg
+  const existingCatalog = await api.getAll('catalog')
+  if (existingCatalog.length === 0) {
+    const catalogItems = [
+      { id: 'seed-cat-0', name: 'Artwork 1 — Abstract Lines', stage: 'productie', colors: ['Snow White','MidnightBlack','Ocean Blue','Forest Green','Stone Grey'], designer: 'Tein', notes: 'Fotoselectie gedaan — 45 shots klaar', online: false },
+      { id: 'seed-cat-1', name: 'Artwork 2 — Geometric Wave', stage: 'design', colors: ['Snow White','MidnightBlack'], designer: 'Tein', notes: 'Design in uitvoering', online: false },
+      { id: 'seed-cat-2', name: 'Artwork 3 — Nature Flow', stage: 'concept', colors: [], designer: '', notes: 'Concept fase', online: false },
+    ]
+    for (const item of catalogItems) { await api.save('catalog', item) }
+    console.log('✓ Catalog geseeded:', catalogItems.length)
+  }
+
   if (existingInv2.length === 0) {
     const investments = [
       { id: 'inv-001', description: 'Eerste voorraad platen (850 st)', category: 'voorraad', amount: 25000, date: '2025-11-15', notes: '850 akoestische platen' },

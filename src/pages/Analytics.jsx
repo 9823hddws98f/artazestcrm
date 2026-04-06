@@ -22,11 +22,23 @@ export default function Analytics() {
   const [budgets, setBudgets] = useState([])
   const [cfg, setCfg] = useState({ cashOnHand: 15000, monthlyFixed: 2500 })
   const [showModal, setShowModal] = useState(false)
-  const [liveMetrics, setLiveMetrics] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('artazest_live_metrics')) || { shopifyRevenue: 0, metaAdSpend: 0, cogs: 0 } }
-    catch { return { shopifyRevenue: 0, metaAdSpend: 0, cogs: 0 } }
-  })
-  const saveLiveMetrics = m => { setLiveMetrics(m); localStorage.setItem('artazest_live_metrics', JSON.stringify(m)) }
+  const [liveMetrics, setLiveMetrics] = useState({ shopifyRevenue: 0, metaAdSpend: 0, cogs: 0 })
+  useEffect(() => {
+    // Laad live metrics uit Supabase settings
+    api.getAll('settings').then(rows => {
+      const row = rows.find(r => r.key === 'live_metrics')
+      if (row?.value) setLiveMetrics(row.value)
+      else {
+        // Fallback localStorage
+        try { const m = JSON.parse(localStorage.getItem('artazest_live_metrics')); if(m) setLiveMetrics(m) } catch {}
+      }
+    })
+  }, [])
+  const saveLiveMetrics = m => {
+    setLiveMetrics(m)
+    localStorage.setItem('artazest_live_metrics', JSON.stringify(m))
+    api.save('settings', { key: 'live_metrics', value: m })
+  }
   const [editItem, setEditItem] = useState(null)
   useEffect(() => {
     api.getAll('investments').then(setInvestments)
@@ -177,7 +189,7 @@ function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, max
                 <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(cat.total / maxCat) * 100}%`, borderRadius: '4px', background: cat.budget > 0 && cat.total > cat.budget ? 'var(--danger)' : 'var(--accent)', transition: 'width 0.5s ease' }} />
               </div>
               {cat.budget > 0 && <div style={{ fontSize: '0.7rem', color: cat.total > cat.budget ? 'var(--danger)' : 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                Budget: {fmt(cat.budget)} — {cat.total > cat.budget ? `${fmt(cat.total - cat.budget)} over` : `${fmt(cat.budget - cat.total)} resterend`}
+                Budget: {fmt(cat.budget)} — {cat.total > cat.budget ? `⚠ ${fmt(cat.total - cat.budget)} over budget` : `${fmt(cat.budget - cat.total)} resterend`}
               </div>}
             </div>
           ))}

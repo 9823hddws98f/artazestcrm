@@ -592,14 +592,14 @@ export default function Tasks({ user }) {
   const active=tasks.filter(t=>!t.archived)
   const filtered=active.filter(t=>filterUser==='all'||t.assignee===filterUser).sort((a,b)=>{const p={high:0,normal:1};if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1);if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1;if(a.dueDate&&!b.dueDate)return -1;if(!a.dueDate&&b.dueDate)return 1;return 0})
   const archived=tasks.filter(t=>t.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0))
-  const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig').length,klaar:filtered.filter(t=>t.status==='klaar').length}
+  const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig'||t.status==='in-uitvoering').length,klaar:filtered.filter(t=>t.status==='klaar').length}
   const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'archief',label:`Archief (${archived.length})`}]
 
   return (
     <>
       <div className="page-header">
         <div><h1>To-do's</h1>
-          <p className="page-subtitle">{counts.todo} to do &middot; {counts.gepland} gepland &middot; {counts.bezig} bezig &middot; {counts.klaar} klaar
+          <p className="page-subtitle">{counts.todo} to do · {counts.gepland} gepland · {counts.bezig} in uitvoering · {counts.klaar} klaar
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
         </div>
