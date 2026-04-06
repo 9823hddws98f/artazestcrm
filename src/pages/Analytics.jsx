@@ -178,20 +178,20 @@ function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, max
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="section-title" style={{ marginBottom: '1rem' }}>Investering per categorie</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+      <div className="card" style={{ marginBottom: '1.5rem', maxWidth: '600px' }}>
+        <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Investering per categorie</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           {byCategory.sort((a, b) => b.total - a.total).map(cat => (
             <div key={cat.key}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
-                <span><span style={{ marginRight: '0.5rem' }}>{cat.icon}</span>{cat.label}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.12rem' }}>
+                <span><span style={{ marginRight: '0.35rem', fontSize: '0.7rem' }}>{cat.icon}</span>{cat.label}</span>
                 <span style={{ fontWeight: 600 }}>{fmt(cat.total)}</span>
-              </div>              <div style={{ position: 'relative', height: '8px', borderRadius: '4px', background: 'var(--bg-secondary)' }}>
+              </div>              <div style={{ position: 'relative', height: '6px', borderRadius: '4px', background: 'var(--bg-secondary)' }}>
                 {cat.budget > 0 && <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(cat.budget / maxCat) * 100}%`, borderRadius: '4px', background: 'rgba(217,119,6,0.15)' }} />}
                 <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(cat.total / maxCat) * 100}%`, borderRadius: '4px', background: cat.budget > 0 && cat.total > cat.budget ? 'var(--danger)' : 'var(--accent)', transition: 'width 0.5s ease' }} />
               </div>
-              {cat.budget > 0 && <div style={{ fontSize: '0.7rem', color: cat.total > cat.budget ? 'var(--danger)' : 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                Budget: {fmt(cat.budget)} — {cat.total > cat.budget ? `⚠ ${fmt(cat.total - cat.budget)} over budget` : `${fmt(cat.budget - cat.total)} resterend`}
+              {cat.budget > 0 && <div style={{ fontSize: '0.65rem', color: cat.total > cat.budget ? 'var(--danger)' : 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                {fmt(cat.budget)} — {cat.total > cat.budget ? `⚠ ${fmt(cat.total - cat.budget)} over` : `${fmt(cat.budget - cat.total)} resterend`}
               </div>}
             </div>
           ))}
