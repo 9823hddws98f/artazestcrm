@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import SearchBar from './SearchBar'
 
 const allNavItems = [
   { path: '/', label: 'Dashboard', icon: '◉' },
@@ -52,7 +51,6 @@ export default function Layout({ user, onLogout, children }) {
       </aside>
       {mobileOpen && <div className="sidebar-overlay" onClick={()=>setMobileOpen(false)}/>}
       <main className="main-content">
-        <SearchBar />
         {children}
       </main>
     </div>

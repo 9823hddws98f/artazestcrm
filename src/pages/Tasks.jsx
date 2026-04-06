@@ -33,7 +33,6 @@ function DagelijkseCheckins() {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
 
-  const reload = () => setItems(load())
   const isChecked = item => item.checkedDate === today
 
   const toggle = id => {
@@ -42,53 +41,71 @@ function DagelijkseCheckins() {
   }
   const add = () => {
     if (!form.name.trim()) return
-    const newItem = {...form, id: `ci-${Date.now()}`, checkedDate: null}
-    const updated = [...items, newItem]
+    const updated = [...items, {...form, id:`ci-${Date.now()}`, checkedDate:null}]
     save(updated); setItems(updated); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
   }
-  const remove = id => { const updated = items.filter(i => i.id!==id); save(updated); setItems(updated) }
+  const remove = id => { const updated = items.filter(i=>i.id!==id); save(updated); setItems(updated) }
 
   const doneCount = items.filter(isChecked).length
+  const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
 
   return (
-    <div style={{marginBottom:'1rem'}}>
-      <div style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.5rem'}}>
-        <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Dagelijkse check-ins</span>
-        {items.length>0&&<span style={{fontSize:'0.65rem',color:doneCount===items.length?'#059669':'var(--text-secondary)',fontWeight:600}}>{doneCount}/{items.length} gedaan</span>}
-        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'1px solid var(--border)',borderRadius:'99px',fontSize:'0.65rem',padding:'0.1rem 0.5rem',cursor:'pointer',color:'var(--text-secondary)',marginLeft:'auto'}}>+ Persoon</button>
+    <div style={{marginBottom:'1.1rem'}}>
+      <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
+        <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Dagelijkse check-ins</span>
+        {items.length>0&&<span style={{fontSize:'0.62rem',color:doneCount===items.length?'#059669':'var(--text-secondary)',fontWeight:600}}>{doneCount}/{items.length}</span>}
       </div>
 
-      {items.length===0&&!showAdd&&(
-        <div style={{fontSize:'0.75rem',color:'var(--text-secondary)',padding:'0.4rem 0'}}>Voeg mensen toe die je dagelijks moet checken.</div>
-      )}
-
-      <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'0.5rem'}}>
         {items.map(item => {
           const done = isChecked(item)
           return (
-            <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.45rem',padding:'0.35rem 0.6rem',borderRadius:'99px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',transition:'all 0.15s',cursor:'pointer'}} onClick={()=>toggle(item.id)}>
-              <div style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s'}}>
+            <div key={item.id}
+              onClick={()=>toggle(item.id)}
+              style={{position:'relative',padding:'0.6rem 0.7rem',borderRadius:'10px',border:`1.5px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+              {/* Vinkje */}
+              <div style={{position:'absolute',top:'0.45rem',right:'0.45rem',width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'#D1D5DB'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s'}}>
                 {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
               </div>
-              <div>
-                <span style={{fontSize:'0.78rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none'}}>{item.name}</span>
-                <span style={{fontSize:'0.68rem',color:'var(--text-secondary)',marginLeft:'0.35rem'}}>{item.via}</span>
-                {item.topic&&<span style={{fontSize:'0.65rem',color:'var(--text-secondary)',marginLeft:'0.35rem'}}>· {item.topic}</span>}
-              </div>
-              <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem',padding:'0 0.1rem',lineHeight:1,opacity:0.6}} onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>×</button>
+              {/* Via icon */}
+              <div style={{fontSize:'1rem',marginBottom:'0.2rem',lineHeight:1}}>{viaIcon[item.via]||'👤'}</div>
+              {/* Naam */}
+              <div style={{fontWeight:600,fontSize:'0.78rem',color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none',marginBottom:'0.08rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
+              {/* Via */}
+              <div style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{item.via}</div>
+              {/* Onderwerp */}
+              {item.topic&&<div style={{fontSize:'0.62rem',color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'0.08rem'}}>· {item.topic}</div>}
+              {/* Verwijder */}
+              <button onClick={e=>{e.stopPropagation();remove(item.id)}}
+                style={{position:'absolute',bottom:'0.35rem',right:'0.4rem',background:'none',border:'none',cursor:'pointer',fontSize:'0.65rem',color:'transparent',padding:0,lineHeight:1}}
+                onMouseEnter={e=>{e.stopPropagation();e.currentTarget.style.color='#DC2626'}}
+                onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
             </div>
           )
         })}
 
-        {showAdd&&(
-          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',padding:'0.3rem 0.5rem',borderRadius:'10px',border:'1px dashed var(--border-strong)',background:'var(--bg-secondary)',flexWrap:'wrap'}}>
-            <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam..." style={{border:'none',background:'transparent',fontSize:'0.78rem',fontWeight:600,outline:'none',width:'90px',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
-            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.7rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
+        {/* Toevoeg-card */}
+        {!showAdd ? (
+          <div onClick={()=>setShowAdd(true)}
+            style={{padding:'0.6rem 0.7rem',borderRadius:'10px',border:'1.5px dashed var(--border)',background:'transparent',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'0.2rem',opacity:0.55,transition:'opacity 0.15s',minHeight:'76px'}}
+            onMouseEnter={e=>e.currentTarget.style.opacity='1'}
+            onMouseLeave={e=>e.currentTarget.style.opacity='0.55'}>
+            <span style={{fontSize:'1.1rem',lineHeight:1}}>+</span>
+            <span style={{fontSize:'0.65rem',color:'var(--text-secondary)',fontWeight:500}}>Persoon</span>
+          </div>
+        ) : (
+          <div style={{padding:'0.55rem 0.65rem',borderRadius:'10px',border:'1.5px dashed var(--accent)',background:'var(--accent-light)',display:'flex',flexDirection:'column',gap:'0.3rem'}}>
+            <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam" style={{border:'none',background:'transparent',fontSize:'0.78rem',fontWeight:600,outline:'none',width:'100%',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
+            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.65rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}>
               {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
             </select>
-            <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Waarover..." style={{border:'none',background:'transparent',fontSize:'0.7rem',outline:'none',width:'110px',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}/>
-            <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'6px',fontSize:'0.7rem',padding:'0.2rem 0.5rem',cursor:'pointer',fontFamily:'var(--font-body)'}}>+ Toevoegen</button>
-            <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem'}}>Annuleer</button>
+            <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Waarover..." style={{border:'none',background:'transparent',fontSize:'0.65rem',outline:'none',width:'100%',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}/>
+            <div style={{display:'flex',gap:'0.3rem',marginTop:'0.1rem'}}>
+              <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'5px',fontSize:'0.65rem',padding:'0.2rem 0.4rem',cursor:'pointer',flex:1}}>+ Add</button>
+              <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:'5px',fontSize:'0.65rem',padding:'0.2rem 0.4rem',cursor:'pointer',color:'var(--text-secondary)'}}>✕</button>
+            </div>
           </div>
         )}
       </div>
