@@ -1145,7 +1145,20 @@ export default function Tasks({ user }) {
   const removeSubtask=subId=>setForm({...form,subtasks:form.subtasks.filter(s=>s.id!==subId)})
 
   const active=tasks.filter(t=>!t.archived)
-  const filtered=active.filter(t=>(filterUser==='all'||t.assignee===filterUser)&&(activeProject==='alle'||t.category===activeProject)).sort((a,b)=>{const p={high:0,normal:1};if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1);if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1;if(a.dueDate&&!b.dueDate)return -1;if(!a.dueDate&&b.dueDate)return 1;return 0})
+  const filtered=active.filter(t=>(filterUser==='all'||t.assignee===filterUser)&&(activeProject==='alle'||t.category===activeProject)).sort((a,b)=>{
+    // 1. Binnen dezelfde kolom: gebruik handmatige sortOrder als die gezet is
+    if(a.status===b.status && a.sortOrder!=null && b.sortOrder!=null) return a.sortOrder-b.sortOrder
+    if(a.status===b.status && a.sortOrder!=null && b.sortOrder==null) return -1
+    if(a.status===b.status && a.sortOrder==null && b.sortOrder!=null) return 1
+    // 2. Daarna: prioriteit
+    const p={high:0,normal:1}
+    if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1)
+    // 3. Dan: deadline
+    if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1
+    if(a.dueDate&&!b.dueDate)return -1
+    if(!a.dueDate&&b.dueDate)return 1
+    return 0
+  })
   const archived=tasks.filter(t=>t.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0))
   const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig'||t.status==='in-uitvoering').length,klaar:filtered.filter(t=>t.status==='klaar').length}
   const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'kalender',label:'Kalender'},{key:'archief',label:`Archief (${archived.length})`}]
