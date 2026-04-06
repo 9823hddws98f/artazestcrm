@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../api'
+import { brandName, colorHex } from '../colors'
 const SECTIONS = [
   { key: 'panelen', label: 'Akoestische panelen' },
   { key: 'lijst', label: 'Houten lijst & knop' },
@@ -81,7 +82,8 @@ function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRe
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.1rem'}}>
                     <span style={{width:'8px',height:'8px',borderRadius:'50%',background:statusColor,flexShrink:0}}/>
-                    <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.name}</span>
+                    <span style={{fontWeight:600,fontSize:'0.88rem'}}>{brandName(item.name)}</span>
+                    <span style={{fontSize:'0.6rem',color:'var(--text-secondary)',fontWeight:400,marginLeft:'0.2rem'}}>({item.name})</span>
                     {idx===0&&item.totalUsed>0&&<span style={{fontSize:'0.6rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#FEF3C7',color:'#92400E',fontWeight:700}}>🔥 #1</span>}
                     {urgent&&item.totalUsed>0&&<span style={{fontSize:'0.6rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#FEE2E2',color:'#991B1B',fontWeight:700}}>⚠ {item.daysLeft}d</span>}
                   </div>
@@ -426,7 +428,7 @@ export default function Inventory() {
                     ) : (
                       <div style={{flex:1,fontWeight:500,fontSize:'0.9rem',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.4rem'}} onClick={()=>setEditing(item.id+'-name')}>
                       <span style={{width:'10px',height:'10px',borderRadius:'50%',background:dotColor,flexShrink:0,boxShadow:`0 0 0 2px ${dotColor}33`}}/>
-                      <span style={{borderBottom:'1px dashed rgba(28,25,23,0.25)'}}>{item.name}</span>
+                      <span style={{borderBottom:'1px dashed rgba(28,25,23,0.25)'}}>{brandName(item.name)}</span>
                       <span style={{fontSize:'0.7rem',color:'#A8A29E'}}>&#9998;</span>
                     </div>
                     )}

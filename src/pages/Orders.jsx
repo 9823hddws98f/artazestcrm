@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
+import { ARTAZEST_COLORS, brandName } from '../colors'
 
 const STATUSES = [
   { key:'nieuw', label:'Nieuw', color:'#6366F1', icon:'📥' },
@@ -8,7 +9,7 @@ const STATUSES = [
   { key:'geleverd', label:'Geleverd', color:'#059669', icon:'✓' },
 ]
 const RETURN_REASONS = ['Beschadigd bij levering','Verkeerde kleur','Niet tevreden','Defect','Verkeerd adres','Anders']
-const COLORS = ['Black','White','Terracotta','Sage','Navy','Sand','Charcoal']
+const COLORS = ARTAZEST_COLORS.map(c => c.key)
 const fmt = n => new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:2}).format(n)
 
 export default function Orders() {
@@ -200,7 +201,7 @@ function ReturnsTab({ returns, save }) {
             <h4 style={{fontSize:'0.82rem',fontWeight:600,marginBottom:'0.5rem'}}>Per kleur</h4>
             {byColor.sort((a,b)=>b.count-a.count).map(c => (
               <div key={c.color} style={{display:'flex',justifyContent:'space-between',padding:'0.2rem 0',fontSize:'0.75rem',borderBottom:'1px solid rgba(28,25,23,0.04)'}}>
-                <span>{c.color}</span><span style={{fontWeight:600}}>{c.count} · {fmt(c.cost)}</span>
+                <span>{brandName(c.color)}</span><span style={{fontWeight:600}}>{c.count} · {fmt(c.cost)}</span>
               </div>
             ))}
           </div>
@@ -221,7 +222,7 @@ function ReturnsTab({ returns, save }) {
               {RETURN_REASONS.map(r=><option key={r}>{r}</option>)}
             </select>
             <select value={form.color} onChange={e=>setForm({...form,color:e.target.value})} style={{padding:'0.3rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.72rem',fontFamily:'var(--font-body)'}}>
-              {COLORS.map(c=><option key={c}>{c}</option>)}
+              {COLORS.map(c=><option key={c} value={c}>{brandName(c)}</option>)}
             </select>
             <input type="number" value={form.cost} onChange={e=>setForm({...form,cost:e.target.value})} placeholder="€" style={{padding:'0.3rem 0.5rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.72rem',fontFamily:'var(--font-body)'}}/>
             <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Notities..." onKeyDown={e=>e.key==='Enter'&&add()} style={{gridColumn:'1/4',padding:'0.3rem 0.5rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.72rem',fontFamily:'var(--font-body)'}}/>
@@ -235,7 +236,7 @@ function ReturnsTab({ returns, save }) {
             <div key={r.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.4rem 0',borderBottom:'1px solid rgba(28,25,23,0.04)',fontSize:'0.75rem'}}>
               <span style={{fontWeight:600,minWidth:'60px'}}>#{r.orderId||'—'}</span>
               <span style={{flex:1}}>{r.reason}</span>
-              <span style={{color:'var(--text-secondary)'}}>{r.color}</span>
+              <span style={{color:'var(--text-secondary)'}}>{brandName(r.color)}</span>
               <span style={{fontWeight:600,minWidth:'60px',textAlign:'right'}}>{fmt(r.cost)}</span>
               <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',minWidth:'50px'}}>{new Date(r.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}</span>
               <button onClick={()=>remove(r.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',opacity:0.4}}>✕</button>
