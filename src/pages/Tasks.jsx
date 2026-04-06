@@ -26,8 +26,8 @@ const DEFAULT_WEEKLY = [
   { id: 'w1', title: 'Content plannen voor volgende week', done: false },
   { id: 'w2', title: 'Analytics & omzet bijwerken', done: false },
   { id: 'w3', title: 'Voorraad controleren', done: false },
-  { id: 'w4', title: 'To-do's prioriteren', done: false },
-  { id: 'w5', title: 'Sam & Productie briefing', done: false },
+  { id: 'w4', title: 'To-dos prioriteren', done: false },
+  { id: 'w5', title: 'Sam en Productie briefing', done: false },
 ]
 
 function WekelijkseTodos() {
