@@ -165,10 +165,19 @@ function DagelijkseCheckinsCompact() {
   const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
   const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
   const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
-  const isChecked = item => item.checkedDate === today
-  const doneCount = items.filter(isChecked).length
+  const getState = item => item.checkedDate === today ? (item.checkState || 'done') : 'none'
+  const doneCount = items.filter(i => getState(i)==='done').length
+  const waitCount = items.filter(i => getState(i)==='waiting').length
 
-  const toggle = id => { const u = items.map(i => i.id===id?{...i,checkedDate:isChecked(i)?null:today}:i); save(u); setItems(u) }
+  const toggle = id => {
+    const item = items.find(i=>i.id===id)
+    if(!item) return
+    const st = getState(item)
+    // Cycle: none → waiting → done → none
+    const next = st==='none' ? 'waiting' : st==='waiting' ? 'done' : 'none'
+    const u = items.map(i => i.id===id ? {...i, checkedDate: next==='none'?null:today, checkState: next==='none'?null:next } : i)
+    save(u); setItems(u)
+  }
   const remove = id => { const u = items.filter(i=>i.id!==id); save(u); setItems(u) }
   const add = () => {
     if (!form.name.trim()) return
@@ -192,7 +201,7 @@ function DagelijkseCheckinsCompact() {
     const lastNotif = localStorage.getItem('artazest_checkin_notif_date')
     if (lastNotif === today) return // Vandaag al gedaan
     
-    const notifItems = items.filter(i => i.notif !== false && !isChecked(i))
+    const notifItems = items.filter(i => i.notif !== false && getState(i)==='none')
     if (notifItems.length === 0) return
     
     // Vraag toestemming en stuur notificatie
@@ -222,7 +231,7 @@ function DagelijkseCheckinsCompact() {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.1rem'}}>
         <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>
-          Check-ins <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)',fontWeight:700}}>{doneCount}/{items.length}</span>
+          Check-ins <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)',fontWeight:700}}>{doneCount}/{items.length}</span>{waitCount>0&&<span style={{color:'#D97706',fontWeight:700}}> · {waitCount} ⏳</span>}
         </span>
         <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+ persoon</button>
       </div>
@@ -237,16 +246,18 @@ function DagelijkseCheckinsCompact() {
         marginBottom:'0.3rem'
       }}>
         {items.map(item => {
-          const done = isChecked(item)
+          const st = getState(item)
+          const colors = { none:{bg:'#FEF2F2',border:'#FECACA',dot:'#DC2626',icon:''},waiting:{bg:'#FFFBEB',border:'#FDE68A',dot:'#D97706',icon:'⏳'},done:{bg:'#F0FDF4',border:'#BBF7D0',dot:'#059669',icon:'✓'} }
+          const cs = colors[st]
           return (
             <div key={item.id}
-              style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:done?'#F0FDF410':'#FEF2F210',borderLeft:`3px solid ${done?'#059669':'#DC2626'}`,border:`1px solid ${done?'#BBF7D0':'#FECACA'}`,cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}
+              style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:cs.bg,borderLeft:`3px solid ${cs.dot}`,border:`1px solid ${cs.border}`,cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}
               onClick={()=>toggle(item.id)}>
               <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
-                <div style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'#DC2626'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  {done&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>✓</span>}
+                <div style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${cs.dot}`,background:st!=='none'?cs.dot:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  {st!=='none'&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>{cs.icon}</span>}
                 </div>
-                <span style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',whiteSpace:'nowrap',flexShrink:0}}>
+                <span style={{fontSize:'0.72rem',fontWeight:600,color:st==='done'?'#059669':st==='waiting'?'#92400E':'var(--text-primary)',whiteSpace:'nowrap',flexShrink:0}}>
                   {item.name}
                 </span>
                 <div style={{flex:1,minWidth:0}} onClick={e=>e.stopPropagation()}>
