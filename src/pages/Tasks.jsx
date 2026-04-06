@@ -760,13 +760,13 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   )
 }
 
-function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId}) {
+function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask}) {
   const [isOver,setIsOver]=useState(false)
   const dropRef = React.useRef(null)
   return (
     <div style={{display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.55rem',padding:'0.4rem 0.6rem',borderRadius:'var(--radius-md)',background:'var(--bg-secondary)'}}>
-        <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/><span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span>
+        <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/><span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span><button onClick={onAddTask} title='Nieuwe taak in deze kolom' style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.85rem',padding:'0 0 0 0.4rem',lineHeight:1,fontWeight:400}} onMouseEnter={e=>e.currentTarget.style.color='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>+</button>
       </div>
       <div ref={dropRef}
         onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(!isOver)setIsOver(true)}}
@@ -774,7 +774,7 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
         onDrop={e=>{e.preventDefault();e.stopPropagation();setIsOver(false);const id=e.dataTransfer.getData('text/plain');if(id)onDrop(status.key,id)}}
         style={{flex:1,minHeight:'140px',borderRadius:'var(--radius-md)',padding:'0.3rem',background:isOver?'#EFF6FF':'rgba(0,0,0,0.01)',border:isOver?'2px dashed #2563EB':'2px solid transparent',transition:'all 0.1s'}}>
         {tasks.map(t=>(<TaskCard key={t.id} task={t} statuses={statuses} compact draggable onDragStart={()=>onCardDragStart(t.id)} onDragEnd={onCardDragEnd} onClick={()=>onCardClick(t)} onStatusChange={s=>onStatusChange(t.id,s)} onSubtaskToggle={subId=>onSubtaskToggle(t.id,subId)} onArchive={()=>onArchive(t.id)}/>))}
-        {tasks.length===0&&<div style={{textAlign:'center',padding:'1.25rem 0.5rem',color:'var(--text-secondary)',fontSize:'0.73rem'}}>{isOver?<span style={{color:'#2563EB',fontWeight:600}}>Hier neerzetten</span>:'Leeg'}</div>}
+        {tasks.length===0&&<div style={{textAlign:'center',padding:'1.25rem 0.5rem',color:'var(--text-secondary)',fontSize:'0.73rem'}}>{isOver?<span style={{color:'#2563EB',fontWeight:600}}>Hier neerzetten</span>:<button onClick={onAddTask} style={{background:'none',border:'1px dashed var(--border)',borderRadius:'8px',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.73rem',padding:'0.5rem 1rem',width:'100%'}} onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>+ Taak toevoegen</button>}</div>}
       </div>
     </div>
   )
@@ -903,7 +903,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}}/>))}
             </div>
           ):view==='archief'?(
             archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:
