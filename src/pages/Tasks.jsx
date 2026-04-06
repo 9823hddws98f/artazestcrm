@@ -565,9 +565,7 @@ export default function Tasks({ user }) {
     const t=tasks.find(x=>x.id===id);if(!t)return
     await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()})
     reload()
-    if(undoToast?.timer)clearTimeout(undoToast.timer)
-    const timer=setTimeout(()=>setUndoToast(null),6000)
-    setUndoToast({id,title:t.title,timer})
+    setUndoToast(prev=>{if(prev?.timer)clearTimeout(prev.timer);const timer=setTimeout(()=>setUndoToast(null),6000);return {id,title:t.title,timer}})
   }
   const undoArchive=async()=>{
     if(!undoToast)return
