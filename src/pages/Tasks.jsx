@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 
-const ASSIGNEES = ['Tein','Sam','Productie']
+const ASSIGNEES = ['Tein','Sam']
+const ALL_ASSIGNEES = ['Tein','Sam','Productie']
 const LAUNCH = new Date('2026-04-18T09:00:00')
 const CATEGORIES = ['Shopify','Content','Ads','Design','Productie','Juridisch','Email','Verpakking','Overig']
 const DEFAULT_STATUSES = [
@@ -866,7 +867,7 @@ export default function Tasks({ user }) {
           <div className="form-group"><label className="form-label">Titel</label><input className="form-input" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Wat moet er gebeuren?" autoFocus/></div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
             <div className="form-group"><label className="form-label">Status</label><select className="form-select" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{statuses.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
-            <div className="form-group"><label className="form-label">Toewijzen</label><select className="form-select" value={form.assignee} onChange={e=>setForm({...form,assignee:e.target.value})}>{ASSIGNEES.map(a=><option key={a}>{a}</option>)}</select></div>
+            <div className="form-group"><label className="form-label">Toewijzen</label><select className="form-select" value={form.assignee} onChange={e=>setForm({...form,assignee:e.target.value})}>{ALL_ASSIGNEES.map(a=><option key={a}>{a}</option>)}</select></div>
             <div className="form-group"><label className="form-label">Prioriteit</label><button className="btn btn-sm" onClick={()=>setForm({...form,priority:form.priority==='high'?'normal':'high'})} style={{width:'100%',justifyContent:'center',fontSize:'0.75rem',background:form.priority==='high'?'var(--danger)':'transparent',color:form.priority==='high'?'#fff':undefined,border:form.priority==='high'?'none':'1px solid var(--border-strong)'}}>Urgent</button></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
