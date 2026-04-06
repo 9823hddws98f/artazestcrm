@@ -204,42 +204,46 @@ function DagelijkseCheckinsCompact() {
         gridAutoFlow:'column',
         gap:'0.25rem',
         alignItems:'start',
-        marginBottom: showAdd ? '0.35rem' : 0
+        marginBottom:'0.3rem'
       }}>
-      {items.map(item => {
-        const done = isChecked(item)
-        return (
-          <div key={item.id}
-            style={{padding:'0.28rem 0.45rem',borderRadius:'6px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',transition:'all 0.15s'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
-              <div onClick={()=>toggle(item.id)}
-                style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,cursor:'pointer',transition:'all 0.15s'}}>
-                {done&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>✓</span>}
+        {items.map(item => {
+          const done = isChecked(item)
+          return (
+            <div key={item.id}
+              style={{padding:'0.28rem 0.45rem',borderRadius:'6px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',transition:'all 0.15s'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
+                <div onClick={()=>toggle(item.id)}
+                  style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,cursor:'pointer',transition:'all 0.15s'}}>
+                  {done&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>✓</span>}
+                </div>
+                <span style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none',whiteSpace:'nowrap',flexShrink:0}}>
+                  {viaIcon[item.via]||'👤'} {item.name}
+                </span>
+                <div style={{flex:1,minWidth:0}} onClick={e=>e.stopPropagation()}>
+                  {editStatus===item.id ? (
+                    <input autoFocus value={item.status||''} onChange={e=>updateStatus(item.id,e.target.value)}
+                      onBlur={()=>setEditStatus(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
+                      placeholder="bezig met..." style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.65rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}/>
+                  ) : (
+                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.65rem',color:item.status?'var(--text-secondary)':'#C4B8A8',fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>
+                      {item.status||'+ status'}
+                    </span>
+                  )}
+                </div>
+                <button onClick={()=>toggleNotif(item.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.58rem',color:item.notif!==false?'#D97706':'#D1C4B8',padding:'0',flexShrink:0}}>
+                  {item.notif!==false?'🔔':'🔕'}
+                </button>
+                <button onClick={()=>remove(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',padding:'0',flexShrink:0,opacity:0.3}}
+                  onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.3'}>×</button>
               </div>
-              <span style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none',whiteSpace:'nowrap',flexShrink:0}}>
-                {viaIcon[item.via]||'👤'} {item.name}
-              </span>
-              <div style={{flex:1,minWidth:0}} onClick={e=>e.stopPropagation()}>
-                {editStatus===item.id ? (
-                  <input autoFocus value={item.status||''} onChange={e=>updateStatus(item.id,e.target.value)}
-                    onBlur={()=>setEditStatus(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
-                    placeholder="bezig met..." style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.65rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}/>
-                ) : (
-                  <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.65rem',color:item.status?'var(--text-secondary)':'#C4B8A8',fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>
-                    {item.status||'+ status'}
-                  </span>
-                )}
-              </div>
-              <button onClick={()=>toggleNotif(item.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.58rem',color:item.notif!==false?'#D97706':'#D1C4B8',padding:'0',flexShrink:0}}>
-                {item.notif!==false?'🔔':'🔕'}
-              </button>
-              <button onClick={()=>remove(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',padding:'0',flexShrink:0,opacity:0.3}}
-                onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.3'}>×</button>
             </div>
-          </div>
-        )
-      })}
-        <div style={{padding:'0.35rem 0.45rem',borderRadius:'6px',border:'1px solid var(--border)',background:'var(--bg-secondary)',display:'flex',flexDirection:'column',gap:'0.2rem'}}>
+          )
+        })}
+      </div>
+
+      {/* Toevoeg form */}
+      {showAdd && (
+        <div style={{padding:'0.35rem 0.45rem',borderRadius:'6px',border:'1px solid var(--border)',background:'var(--bg-secondary)',display:'flex',flexDirection:'column',gap:'0.2rem',marginBottom:'0.25rem'}}>
           <div style={{display:'flex',gap:'0.25rem',alignItems:'center'}}>
             <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
               placeholder="Naam..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.75rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)',minWidth:0}}/>
@@ -256,12 +260,9 @@ function DagelijkseCheckinsCompact() {
         </div>
       )}
 
-      </div>
-
       {items.length===0&&!showAdd&&(
         <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.25rem 0'}}>Voeg mensen toe die je dagelijks checkt</div>
       )}
-    </div>
   )
 }
 
