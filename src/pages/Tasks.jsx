@@ -239,19 +239,33 @@ function DagelijkseCheckinsCompact() {
         {items.map(item => {
           const done = isChecked(item)
           return (
-            <div key={item.id} onClick={()=>toggle(item.id)}
-              style={{padding:'0.35rem 0.5rem',borderRadius:'8px',border:'none',background:done?'#059669':'#DC2626',cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}>
+            <div key={item.id}
+              style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:done?'#F0FDF410':'#FEF2F210',borderLeft:`3px solid ${done?'#059669':'#DC2626'}`,border:`1px solid ${done?'#BBF7D0':'#FECACA'}`,cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}
+              onClick={()=>toggle(item.id)}>
               <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
-                <span style={{fontSize:'0.78rem',fontWeight:700,color:'#fff',flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                  {done?'✓ ':''}{item.name}
+                <div style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${done?'#059669':'#DC2626'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  {done&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>✓</span>}
+                </div>
+                <span style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',whiteSpace:'nowrap',flexShrink:0}}>
+                  {item.name}
                 </span>
-                {item.topic&&<span style={{fontSize:'0.55rem',color:'rgba(255,255,255,0.65)',whiteSpace:'nowrap',maxWidth:'80px',overflow:'hidden',textOverflow:'ellipsis'}}>{item.topic}</span>}
-                <span style={{fontSize:'0.55rem',color:'rgba(255,255,255,0.5)',flexShrink:0}}>{viaIcon[item.via]||''}</span>
-                <button onClick={e=>{e.stopPropagation();toggleNotif(item.id)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.55rem',padding:'0',flexShrink:0,filter:'brightness(2)'}}>
+                <div style={{flex:1,minWidth:0}} onClick={e=>e.stopPropagation()}>
+                  {editStatus===item.id ? (
+                    <input autoFocus value={item.status||''} onChange={e=>updateStatus(item.id,e.target.value)}
+                      onBlur={()=>setEditStatus(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
+                      placeholder="bezig met..." style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.62rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}/>
+                  ) : (
+                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.62rem',color:item.status?'var(--text-secondary)':'#D1C4B8',fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>
+                      {item.status||'+ status'}
+                    </span>
+                  )}
+                </div>
+                <span style={{fontSize:'0.55rem',color:'var(--text-secondary)',flexShrink:0}}>{viaIcon[item.via]||''}</span>
+                <button onClick={e=>{e.stopPropagation();toggleNotif(item.id)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.55rem',padding:'0',flexShrink:0}}>
                   {item.notif!==false?'🔔':'🔕'}
                 </button>
-                <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)',fontSize:'0.6rem',padding:'0',flexShrink:0}}
-                  onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.3)'}>×</button>
+                <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',padding:'0',flexShrink:0,opacity:0.3}}
+                  onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.3'}>×</button>
               </div>
             </div>
           )
