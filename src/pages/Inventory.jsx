@@ -98,6 +98,25 @@ function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRe
                   ))}
                 </div>
 
+                {/* Danger zone indicator */}
+                {item.daysLeft !== null && item.totalUsed > 0 ? (
+                  <div style={{flexShrink:0,textAlign:'center',minWidth:'80px'}}>
+                    {item.daysLeft < 90 ? (
+                      <div style={{padding:'0.2rem 0.5rem',borderRadius:'8px',background:item.daysLeft<30?'#FEE2E2':item.daysLeft<60?'#FEF3C7':'#FFF7ED',border:`1px solid ${item.daysLeft<30?'#FECACA':item.daysLeft<60?'#FDE68A':'#FED7AA'}`}}>
+                        <div style={{fontSize:'0.65rem',fontWeight:700,color:item.daysLeft<30?'#991B1B':item.daysLeft<60?'#92400E':'#9A3412'}}>⚠ DANGER ZONE</div>
+                        <div style={{fontSize:'0.6rem',color:item.daysLeft<30?'#B91C1C':item.daysLeft<60?'#A16207':'#C2410C'}}>op in {item.daysLeft < 7 ? `${item.daysLeft}d` : `${Math.round(item.daysLeft/7)}w`}</div>
+                      </div>
+                    ) : (
+                      <div style={{padding:'0.2rem 0.5rem',borderRadius:'8px',background:'#F0FDF4',border:'1px solid #BBF7D0'}}>
+                        <div style={{fontSize:'0.65rem',fontWeight:600,color:'#166534'}}>✓ Veilig</div>
+                        <div style={{fontSize:'0.6rem',color:'#15803D'}}>~{Math.round(item.daysLeft/30)}m voorraad</div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{minWidth:'80px'}}/>
+                )}
+
                 {/* Stats */}
                 <div style={{display:'flex',gap:'1rem',flexShrink:0,fontSize:'0.72rem',textAlign:'center'}}>
                   <div><div style={{fontWeight:700,fontSize:'0.9rem',color:'var(--text-primary)'}}>{item.totalUsed}</div><div style={{color:'var(--text-secondary)'}}>gebruikt</div></div>
