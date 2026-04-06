@@ -1,3 +1,5 @@
+import { api } from './api'
+
 const USERS = [
   { name: 'Tein', role: 'admin' },
   { name: 'Sam', role: 'team' },
@@ -7,6 +9,13 @@ const USERS = [
 const DEFAULT_PASSWORDS = { Tein: '2026', Sam: '2026', Productie: '2026' }
 
 export const auth = {
+  _initialized: false,
+  async init() {
+    if (this._initialized) return
+    const val = await api.getSetting('passwords')
+    if (val) localStorage.setItem('artazest_passwords', JSON.stringify(val))
+    this._initialized = true
+  },
   getPasswords() {
     try { return JSON.parse(localStorage.getItem('artazest_passwords')) || DEFAULT_PASSWORDS }
     catch { return DEFAULT_PASSWORDS }
@@ -29,5 +38,6 @@ export const auth = {
     const passwords = this.getPasswords()
     passwords[name] = newPassword
     localStorage.setItem('artazest_passwords', JSON.stringify(passwords))
+    api.saveSetting('passwords', passwords)
   },
 }

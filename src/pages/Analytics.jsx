@@ -45,9 +45,10 @@ export default function Analytics() {
     api.getAll('budgets').then(setBudgets)
     const s = localStorage.getItem('artazest_analytics_cfg')
     if (s) setCfg(JSON.parse(s))
+    api.getSetting('analytics_cfg').then(val => { if (val) { setCfg(val); localStorage.setItem('artazest_analytics_cfg', JSON.stringify(val)) } })
   }, [])
 
-  const saveCfg = c => { setCfg(c); localStorage.setItem('artazest_analytics_cfg', JSON.stringify(c)) }
+  const saveCfg = c => { setCfg(c); localStorage.setItem('artazest_analytics_cfg', JSON.stringify(c)); api.saveSetting('analytics_cfg', c) }
   const totalInv = investments.reduce((s, i) => s + (i.amount || 0), 0)
   const byCategory = CATEGORIES.map(cat => {
     const items = investments.filter(i => i.category === cat.key)

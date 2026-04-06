@@ -69,6 +69,7 @@ export default function App() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    auth.init()
     // Seed Supabase als leeg
     api.seedIfEmpty('tasks', SEED_TASKS)
     api.seedIfEmpty('inventory', SEED_INVENTORY)

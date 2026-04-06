@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { auth } from '../auth'
+import { api } from '../api'
 
 const ALL_PAGES = [
   { path: '/', label: 'Dashboard', icon: '◉' },
@@ -23,15 +24,17 @@ export default function Settings({ user }) {
   const [pwMsgs, setPwMsgs] = useState({})
 
   useEffect(() => {
-    const data = localStorage.getItem('artazest_settings')
-    if (data) setSettings(JSON.parse(data))
-    else setSettings({
+    const defaults = {
       roles: {
         Tein: { role: 'admin', pages: ALL_PAGES.map(p => p.path) },
         Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
         Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
       }
-    })
+    }
+    const data = localStorage.getItem('artazest_settings')
+    if (data) setSettings(JSON.parse(data))
+    else setSettings(defaults)
+    api.getSetting('app_settings').then(val => { if (val) { setSettings(val); localStorage.setItem('artazest_settings', JSON.stringify(val)) } })
   }, [])
 
   if (!settings) return null
@@ -53,6 +56,7 @@ export default function Settings({ user }) {
 
   const handleSave = () => {
     localStorage.setItem('artazest_settings', JSON.stringify(settings))
+    api.saveSetting('app_settings', settings)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
