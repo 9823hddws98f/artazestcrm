@@ -95,7 +95,7 @@ const SEED_SETTINGS = {
   }
 };
 export function seedData() {
-  const V = 'v7'
+  const V = 'v8'
   const stores = { tasks: SEED_TASKS, inventory: SEED_INVENTORY, artwork: SEED_ARTWORK }
   const curV = localStorage.getItem('artazest_seed_version')
   for (const [store, items] of Object.entries(stores)) {
@@ -106,6 +106,15 @@ export function seedData() {
   }
   if (!localStorage.getItem('artazest_settings') || curV !== V) {
     localStorage.setItem('artazest_settings', JSON.stringify(SEED_SETTINGS))
+  }
+  // Reset statuses naar default (verwijdert eventuele garbage zoals 'knk')
+  if (curV !== V) {
+    localStorage.setItem('artazest_statuses', JSON.stringify([
+      { key: 'todo', label: 'To do', color: '#78716C' },
+      { key: 'gepland', label: 'Gepland', color: '#2563EB' },
+      { key: 'bezig', label: 'Bezig', color: '#D97706' },
+      { key: 'klaar', label: 'Klaar', color: '#059669' },
+    ]))
   }
   localStorage.setItem('artazest_seed_version', V)
 
