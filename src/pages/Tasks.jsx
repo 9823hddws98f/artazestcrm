@@ -352,7 +352,7 @@ function DagelijkseCheckins() {
               onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'}
               onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
               {/* Vinkje */}
-              <div style={{position:'absolute',top:'0.45rem',right:'0.45rem',width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'#D1D5DB'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s'}}>
+              <div style={{position:'absolute',top:'0.45rem',right:'0.45rem',width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'#D1D5DB'}`,background:done?'#059669':item.status?'#D97706':'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s'}}>
                 {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
               </div>
               {/* Via icon */}
@@ -918,64 +918,102 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
 
 // ─── KALENDER VIEW ──────────────────────────────────────────────────────────
 function KalenderView({ tasks, onTaskClick, onAddTask }) {
-  const [current, setCurrent] = useState(new Date())
-  const year = current.getFullYear()
-  const month = current.getMonth()
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const today = new Date().toISOString().slice(0,10)
-  const monthName = current.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
-  const pad = firstDay === 0 ? 6 : firstDay - 1 // maandag start
-
-  const days = []
-  for (let i = 0; i < pad; i++) days.push(null)
-  for (let i = 1; i <= daysInMonth; i++) days.push(i)
-
-  const taskForDay = (day) => {
-    if (!day) return []
-    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+  const [weekOffset, setWeekOffset] = useState(0)
+  const today = new Date()
+  const todayISO = today.toISOString().slice(0,10)
+  
+  // Bereken maandag van de huidige week + offset
+  const getMonday = (d, offset) => {
+    const date = new Date(d)
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7) + (offset * 7))
+    return date
+  }
+  
+  const monday = getMonday(today, weekOffset)
+  const weekDays = Array.from({length:7}, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+  
+  const weekLabel = () => {
+    const start = weekDays[0]
+    const end = weekDays[6]
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getDate()} – ${end.getDate()} ${start.toLocaleDateString('nl-NL',{month:'long',year:'numeric'})}`
+    }
+    return `${start.getDate()} ${start.toLocaleDateString('nl-NL',{month:'short'})} – ${end.getDate()} ${end.toLocaleDateString('nl-NL',{month:'short',year:'numeric'})}`
+  }
+  
+  const dayNames = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag']
+  const dayNamesShort = ['Ma','Di','Wo','Do','Vr','Za','Zo']
+  
+  const tasksForDay = (date) => {
+    const iso = date.toISOString().slice(0,10)
     return tasks.filter(t => (t.dueDate===iso||t.plannedDate===iso) && t.status!=='klaar' && !t.archived)
   }
 
-  const dayNames = ['Ma','Di','Wo','Do','Vr','Za','Zo']
-
   return (
-    <div className="card">
+    <div>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1rem'}}>
-        <button onClick={()=>setCurrent(new Date(year,month-1,1))} className="btn btn-sm btn-outline">←</button>
-        <span style={{fontFamily:'var(--font-display)',fontSize:'1.1rem',fontWeight:600,textTransform:'capitalize'}}>{monthName}</span>
-        <button onClick={()=>setCurrent(new Date(year,month+1,1))} className="btn btn-sm btn-outline">→</button>
+      <div className="card" style={{marginBottom:'0.75rem',padding:'0.75rem 1rem'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <button onClick={()=>setWeekOffset(w=>w-1)} className="btn btn-sm btn-outline">← Vorige</button>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-display)',fontSize:'1rem',fontWeight:600}}>{weekLabel()}</div>
+            {weekOffset!==0&&<button onClick={()=>setWeekOffset(0)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:'0.68rem',cursor:'pointer',fontWeight:600,marginTop:'0.1rem'}}>↩ Vandaag</button>}
+          </div>
+          <button onClick={()=>setWeekOffset(w=>w+1)} className="btn btn-sm btn-outline">Volgende →</button>
+        </div>
       </div>
-      {/* Dag headers */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'0.25rem',marginBottom:'0.25rem'}}>
-        {dayNames.map(d=><div key={d} style={{textAlign:'center',fontSize:'0.65rem',fontWeight:700,color:'var(--text-secondary)',padding:'0.25rem 0'}}>{d}</div>)}
-      </div>
-      {/* Dagen */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'0.25rem'}}>
-        {days.map((day, i) => {
-          if (!day) return <div key={`e${i}`}/>
-          const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-          const isToday = iso === today
-          const dayTasks = taskForDay(day)
+      
+      {/* Week grid */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'0.5rem'}}>
+        {weekDays.map((date, i) => {
+          const iso = date.toISOString().slice(0,10)
+          const isToday = iso === todayISO
+          const isPast = date < new Date(todayISO)
+          const dayTasks = tasksForDay(date)
           const hasUrgent = dayTasks.some(t=>t.priority==='high'||t.isMIT)
+          const overdue = dayTasks.filter(t=>t.dueDate===iso&&isPast)
+          
           return (
-            <div key={day}
-              onClick={()=>onAddTask(iso)}
-              style={{minHeight:'72px',borderRadius:'8px',border:isToday?'2px solid #D97706':'1px solid var(--border)',background:isToday?'#FFF7ED':'var(--bg-secondary)',padding:'0.3rem',cursor:'pointer',transition:'all 0.1s'}}
-              onMouseEnter={e=>e.currentTarget.style.background='var(--bg-card)'}
-              onMouseLeave={e=>e.currentTarget.style.background=isToday?'#FFF7ED':'var(--bg-secondary)'}>
-              <div style={{fontSize:'0.72rem',fontWeight:isToday?700:400,color:isToday?'#D97706':'var(--text-primary)',marginBottom:'0.2rem',display:'flex',justifyContent:'space-between'}}>
-                {day}
-                {hasUrgent && <span style={{fontSize:'0.6rem'}}>🔥</span>}
-              </div>
-              {dayTasks.slice(0,3).map(t=>(
-                <div key={t.id} onClick={e=>{e.stopPropagation();onTaskClick(t)}}
-                  style={{fontSize:'0.6rem',padding:'0.1rem 0.25rem',borderRadius:'3px',marginBottom:'0.1rem',background:t.isMIT?'#FEE2E2':t.priority==='high'?'#FEF3C7':'rgba(28,25,23,0.07)',color:t.isMIT?'#991B1B':t.priority==='high'?'#92400E':'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',fontWeight:500}}>
-                  {t.title}
+            <div key={i} style={{minHeight:'200px',borderRadius:'10px',border:isToday?'2px solid #D97706':'1px solid var(--border)',background:isToday?'#FFF7ED':'var(--bg-card)',padding:'0.5rem',display:'flex',flexDirection:'column'}}>
+              {/* Dag header */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem',paddingBottom:'0.3rem',borderBottom:'1px solid var(--border)'}}>
+                <div>
+                  <div style={{fontSize:'0.62rem',color:isToday?'#D97706':'var(--text-secondary)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{dayNamesShort[i]}</div>
+                  <div style={{fontSize:'1.2rem',fontWeight:700,color:isToday?'#D97706':isPast?'var(--text-secondary)':'var(--text-primary)',lineHeight:1}}>{date.getDate()}</div>
                 </div>
-              ))}
-              {dayTasks.length>3&&<div style={{fontSize:'0.55rem',color:'var(--text-secondary)'}}>+{dayTasks.length-3}</div>}
+                <div style={{display:'flex',alignItems:'center',gap:'0.2rem'}}>
+                  {hasUrgent&&<span style={{fontSize:'0.6rem'}}>🔥</span>}
+                  {dayTasks.length>0&&<span style={{fontSize:'0.6rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:overdue.length>0?'#FEE2E2':'var(--bg-secondary)',color:overdue.length>0?'#DC2626':'var(--text-secondary)',fontWeight:700}}>{dayTasks.length}</span>}
+                </div>
+              </div>
+              
+              {/* Taken */}
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:'0.2rem',overflow:'auto'}}>
+                {dayTasks.map(t=>{
+                  const isOverdue = t.dueDate===iso && isPast
+                  return (
+                    <div key={t.id} onClick={()=>onTaskClick(t)}
+                      style={{fontSize:'0.68rem',padding:'0.25rem 0.35rem',borderRadius:'5px',cursor:'pointer',fontWeight:500,
+                        background:t.isMIT?'#FEE2E2':isOverdue?'#FEF2F2':t.priority==='high'?'#FEF3C7':'var(--bg-secondary)',
+                        color:t.isMIT?'#991B1B':isOverdue?'#DC2626':t.priority==='high'?'#92400E':'var(--text-primary)',
+                        borderLeft:`2px solid ${t.isMIT?'#DC2626':isOverdue?'#DC2626':t.priority==='high'?'#D97706':'var(--border)'}`,
+                        transition:'all 0.1s'}}
+                      onMouseEnter={e=>e.currentTarget.style.transform='scale(1.02)'}
+                      onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+                      <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.isMIT?'🔥 ':''}{t.title}</div>
+                      <div style={{fontSize:'0.55rem',color:'var(--text-secondary)',marginTop:'0.08rem'}}>{t.assignee} · {t.category||'Overig'}</div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* Add knop */}
+              <button onClick={()=>onAddTask(iso)} style={{marginTop:'0.3rem',width:'100%',padding:'0.15rem',borderRadius:'4px',border:'1px dashed var(--border)',background:'transparent',color:'var(--text-secondary)',fontSize:'0.6rem',cursor:'pointer',opacity:0.5,transition:'opacity 0.15s'}}
+                onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.5'}>+</button>
             </div>
           )
         })}
