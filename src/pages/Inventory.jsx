@@ -8,6 +8,13 @@ const SECTIONS = [
   { key: 'samples', label: 'Samples snijden' },
   { key: 'cnc', label: 'CNC' },
 ]
+const SHIPMENT_STATUSES = [
+  { key: 'besteld', label: 'Besteld', color: '#2563EB' },
+  { key: 'verzonden', label: 'Verzonden', color: '#D97706' },
+  { key: 'onderweg', label: 'Onderweg', color: '#7C3AED' },
+  { key: 'geleverd', label: 'Geleverd', color: '#059669' },
+  { key: 'vertraagd', label: 'Vertraagd', color: '#DC2626' },
+]
 const PER_ARTWORK = 2
 export default function Inventory() {
   const [items, setItems] = useState([])
@@ -19,8 +26,24 @@ export default function Inventory() {
   const [showBatch, setShowBatch] = useState(null)
   const [batchForm, setBatchForm] = useState({ qty: 0, date: '', note: '' })
   const [form, setForm] = useState({name:'',quantity:0,minStock:10,leadTimeDays:90,supplier:'',notes:''})
+  const [shipments, setShipments] = useState([])
+  const [showAddShipment, setShowAddShipment] = useState(false)
+  const [expandedShipment, setExpandedShipment] = useState(null)
+  const [editShipment, setEditShipment] = useState(null)
+  const [confirmDelShipment, setConfirmDelShipment] = useState(null)
+  const emptyShipment = {description:'',supplier:'Alibaba',orderedDate:new Date().toISOString().slice(0,10),shippedDate:'',expectedDate:'',status:'besteld',quantity:0,unit:'stuks',amount:0,trackingUrl:'',supplierUrl:'',notes:''}
+  const [shipForm, setShipForm] = useState(emptyShipment)
   useEffect(() => { api.getAll('inventory').then(setItems) }, [])
   const reload = () => api.getAll('inventory').then(setItems)
+  const reloadShipments = () => api.getAll('shipments').then(setShipments)
+  useEffect(() => { reloadShipments() }, [])
+  const saveShipment = async () => {
+    if (!shipForm.description.trim()) return
+    await api.save('shipments', { ...shipForm, ...(editShipment?{id:editShipment}:{}), id: editShipment||`ship-${Date.now()}`, createdAt: new Date().toISOString() })
+    setShipForm(emptyShipment); setShowAddShipment(false); setEditShipment(null); reloadShipments()
+  }
+  const delShipment = async (id) => { await api.remove('shipments', id); setConfirmDelShipment(null); reloadShipments() }
+  const startEditShipment = (s) => { setShipForm({...emptyShipment,...s}); setEditShipment(s.id); setShowAddShipment(true) }
   const handleSave = async () => {
     if (!form.name.trim()) return
     await api.save('inventory', { ...form, section: tab, batches: [{ qty: form.quantity, date: new Date().toISOString().slice(0,10), note: 'Startvoorraad' }], startStock: form.quantity })
@@ -233,6 +256,156 @@ export default function Inventory() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ZENDINGEN VIEW */}
+      {tab === 'zendingen' && (
+        <ZendingenView shipments={shipments} onAdd={()=>{setShipForm(emptyShipment);setEditShipment(null);setShowAddShipment(true)}}
+          onEdit={startEditShipment} onDelete={id=>setConfirmDelShipment(id)} expanded={expandedShipment} setExpanded={setExpandedShipment}/>
+      )}
+
+      {/* ZENDINGEN MODAL */}
+      {showAddShipment && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&(setShowAddShipment(false),setEditShipment(null))}>
+          <div className="modal" style={{maxWidth:'560px'}}>
+            <div className="modal-header"><h3>{editShipment?'Zending bewerken':'Nieuwe zending'}</h3><button className="modal-close" onClick={()=>{setShowAddShipment(false);setEditShipment(null)}}>✕</button></div>
+            <div className="form-group"><label className="form-label">Omschrijving</label>
+              <input className="form-input" value={shipForm.description} onChange={e=>setShipForm({...shipForm,description:e.target.value})} placeholder="bijv. Houten lijsten 60x60cm (50 stuks)" autoFocus/></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Leverancier</label>
+                <input className="form-input" value={shipForm.supplier} onChange={e=>setShipForm({...shipForm,supplier:e.target.value})} placeholder="Alibaba, Bol.com..."/></div>
+              <div className="form-group"><label className="form-label">Status</label>
+                <select className="form-select" value={shipForm.status} onChange={e=>setShipForm({...shipForm,status:e.target.value})}>
+                  {SHIPMENT_STATUSES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Besteld op</label>
+                <input className="form-input" type="date" value={shipForm.orderedDate} onChange={e=>setShipForm({...shipForm,orderedDate:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Verzonden op</label>
+                <input className="form-input" type="date" value={shipForm.shippedDate} onChange={e=>setShipForm({...shipForm,shippedDate:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Verwachte levering</label>
+                <input className="form-input" type="date" value={shipForm.expectedDate} onChange={e=>setShipForm({...shipForm,expectedDate:e.target.value})}/></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Aantal</label>
+                <input className="form-input" type="number" value={shipForm.quantity} onChange={e=>setShipForm({...shipForm,quantity:parseInt(e.target.value)||0})}/></div>
+              <div className="form-group"><label className="form-label">Eenheid</label>
+                <input className="form-input" value={shipForm.unit} onChange={e=>setShipForm({...shipForm,unit:e.target.value})} placeholder="stuks, meter..."/></div>
+              <div className="form-group"><label className="form-label">Bedrag (€)</label>
+                <input className="form-input" type="number" value={shipForm.amount} onChange={e=>setShipForm({...shipForm,amount:parseFloat(e.target.value)||0})}/></div>
+            </div>
+            <div className="form-group"><label className="form-label">🔗 Link leveranciersgesprek (Alibaba etc.)</label>
+              <input className="form-input" value={shipForm.supplierUrl} onChange={e=>setShipForm({...shipForm,supplierUrl:e.target.value})} placeholder="https://alibaba.com/trade/..."/></div>
+            <div className="form-group"><label className="form-label">🚚 Tracking link</label>
+              <input className="form-input" value={shipForm.trackingUrl} onChange={e=>setShipForm({...shipForm,trackingUrl:e.target.value})} placeholder="https://track.alibaba.com/..."/></div>
+            <div className="form-group"><label className="form-label">Notities</label>
+              <textarea className="form-textarea" value={shipForm.notes} onChange={e=>setShipForm({...shipForm,notes:e.target.value})} placeholder="Details, afspraken..." rows={2}/></div>
+            <div style={{display:'flex',justifyContent:'space-between'}}>
+              <div>{editShipment&&<button className="btn btn-sm" style={{color:'var(--danger)',background:'none',border:'none'}} onClick={()=>{setConfirmDelShipment(editShipment);setShowAddShipment(false)}}>Verwijderen</button>}</div>
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button className="btn btn-outline" onClick={()=>{setShowAddShipment(false);setEditShipment(null)}}>Annuleren</button>
+                <button className="btn btn-primary" onClick={saveShipment}>{editShipment?'Bijwerken':'Opslaan'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Verwijder zending bevestiging */}
+      {confirmDelShipment&&(
+        <div className="modal-overlay" onClick={()=>setConfirmDelShipment(null)}>
+          <div className="modal" style={{maxWidth:'380px',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+            <h3 style={{marginBottom:'0.75rem'}}>Zending verwijderen?</h3>
+            <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
+              <button className="btn btn-outline" onClick={()=>setConfirmDelShipment(null)}>Annuleren</button>
+              <button className="btn btn-primary" style={{background:'var(--danger)'}} onClick={()=>delShipment(confirmDelShipment)}>Verwijderen</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── ZENDINGEN VIEW ─────────────────────────────────────────────────────────
+function ZendingenView({ shipments, onAdd, onEdit, onDelete, expanded, setExpanded }) {
+  const active = shipments.filter(s => s.status !== 'geleverd').sort((a,b) => (a.expectedDate||'').localeCompare(b.expectedDate||''))
+  const delivered = shipments.filter(s => s.status === 'geleverd').sort((a,b) => (b.expectedDate||'').localeCompare(a.expectedDate||''))
+  const statusInfo = { besteld:{label:'Besteld',color:'#2563EB',bg:'#EFF6FF'}, verzonden:{label:'Verzonden',color:'#D97706',bg:'#FFF7ED'}, onderweg:{label:'Onderweg',color:'#7C3AED',bg:'#F5F3FF'}, geleverd:{label:'Geleverd',color:'#059669',bg:'#F0FDF4'}, vertraagd:{label:'Vertraagd',color:'#DC2626',bg:'#FEF2F2'} }
+  const fmt = d => d ? new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : '—'
+  const daysUntil = d => d ? Math.ceil((new Date(d)-new Date())/(1000*60*60*24)) : null
+  const fmtEur = n => n ? new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n) : '—'
+
+  const ShipCard = ({s}) => {
+    const si = statusInfo[s.status] || statusInfo.besteld
+    const days = daysUntil(s.expectedDate)
+    const isOpen = expanded === s.id
+    return (
+      <div style={{border:'1px solid var(--border)',borderRadius:'12px',overflow:'hidden',marginBottom:'0.75rem',background:'var(--bg-card)'}}>
+        {/* Header */}
+        <div onClick={()=>setExpanded(isOpen?null:s.id)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1rem',cursor:'pointer',background:isOpen?'var(--bg-secondary)':'transparent'}}>
+          <div style={{padding:'0.2rem 0.6rem',borderRadius:'99px',background:si.bg,color:si.color,fontSize:'0.7rem',fontWeight:700,flexShrink:0}}>{si.label}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:600,fontSize:'0.85rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.description}</div>
+            <div style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{s.supplier}{s.quantity>0?` · ${s.quantity} ${s.unit||'stuks'}`:''}{s.amount>0?` · ${fmtEur(s.amount)}`:''}</div>
+          </div>
+          {s.expectedDate && (
+            <div style={{textAlign:'right',flexShrink:0}}>
+              <div style={{fontSize:'0.72rem',fontWeight:600,color:days!==null&&days<0?'#DC2626':days!==null&&days<=3?'#D97706':'var(--text-secondary)'}}>
+                {days===null?'':days<0?`${Math.abs(days)}d vertraagd`:days===0?'Vandaag':days<=7?`over ${days}d`:`${fmt(s.expectedDate)}`}
+              </div>
+              <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{days!==null&&Math.abs(days)<=7?fmt(s.expectedDate):''}</div>
+            </div>
+          )}
+          <span style={{color:'var(--text-secondary)',fontSize:'0.75rem'}}>{isOpen?'▲':'▼'}</span>
+        </div>
+        {/* Detail */}
+        {isOpen && (
+          <div style={{padding:'0.75rem 1rem',borderTop:'1px solid var(--border)',background:'var(--bg-secondary)'}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'0.75rem',marginBottom:'0.75rem'}}>
+              {[['Besteld',fmt(s.orderedDate)],['Verzonden',fmt(s.shippedDate)],['Verwacht',fmt(s.expectedDate)]].map(([l,v])=>(
+                <div key={l}>
+                  <div style={{fontSize:'0.62rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem'}}>{l}</div>
+                  <div style={{fontSize:'0.82rem',fontWeight:500}}>{v}</div>
+                </div>
+              ))}
+            </div>
+            {s.notes&&<p style={{fontSize:'0.78rem',color:'var(--text-secondary)',margin:'0 0 0.75rem'}}>{s.notes}</p>}
+            <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
+              {s.supplierUrl&&<a href={s.supplierUrl} target="_blank" rel="noreferrer" style={{fontSize:'0.75rem',color:'#2563EB',textDecoration:'none',padding:'0.25rem 0.6rem',borderRadius:'6px',background:'#EFF6FF',fontWeight:500}} onClick={e=>e.stopPropagation()}>🔗 Leveranciersgesprek</a>}
+              {s.trackingUrl&&<a href={s.trackingUrl} target="_blank" rel="noreferrer" style={{fontSize:'0.75rem',color:'#7C3AED',textDecoration:'none',padding:'0.25rem 0.6rem',borderRadius:'6px',background:'#F5F3FF',fontWeight:500}} onClick={e=>e.stopPropagation()}>🚚 Track & Trace</a>}
+              <button onClick={e=>{e.stopPropagation();onEdit(s)}} style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem',borderRadius:'6px',background:'var(--bg-card)',border:'1px solid var(--border)',cursor:'pointer',fontFamily:'var(--font-body)'}}>✎ Bewerken</button>
+              <button onClick={e=>{e.stopPropagation();onDelete(s.id)}} style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem',borderRadius:'6px',background:'#FEF2F2',color:'#DC2626',border:'1px solid #FCA5A5',cursor:'pointer',fontFamily:'var(--font-body)'}}>Verwijderen</button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+        <div>
+          <h3 style={{margin:0,fontSize:'1rem',fontWeight:600}}>Actieve zendingen</h3>
+          <p style={{margin:'0.1rem 0 0',fontSize:'0.75rem',color:'var(--text-secondary)'}}>{active.length} onderweg · {delivered.length} geleverd</p>
+        </div>
+        <button className="btn btn-primary" onClick={onAdd}>+ Nieuwe zending</button>
+      </div>
+
+      {active.length===0?(
+        <div className="card" style={{textAlign:'center',padding:'2rem',color:'var(--text-secondary)'}}>
+          <div style={{fontSize:'2rem',marginBottom:'0.5rem'}}>📦</div>
+          <div style={{fontSize:'0.85rem',marginBottom:'1rem'}}>Geen actieve zendingen</div>
+          <button className="btn btn-outline" onClick={onAdd}>+ Eerste zending toevoegen</button>
+        </div>
+      ):active.map(s=><ShipCard key={s.id} s={s}/>)}
+
+      {delivered.length>0&&(
+        <>
+          <div style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)',margin:'1.5rem 0 0.75rem'}}>Geleverd ({delivered.length})</div>
+          {delivered.map(s=><ShipCard key={s.id} s={s}/>)}
+        </>
       )}
     </>
   )
