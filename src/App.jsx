@@ -25,7 +25,7 @@ export default function App() {
   const handleLogin = () => {
     const u = auth.login(loginName, pin)
     if (u) { setUser(u); setError('') }
-    else setError('Onjuiste PIN of naam')
+    else setError('Onjuist wachtwoord')
   }
   const handleLogout = () => { auth.logout(); setUser(null) }
 
@@ -42,7 +42,7 @@ export default function App() {
             <option value="">Kies je naam...</option>
             {auth.getUsers().map(u=><option key={u.name} value={u.name}>{u.name}</option>)}
           </select>
-          <input type="password" placeholder="PIN" value={pin} onChange={e=>setPin(e.target.value)}
+          <input type="password" placeholder="Wachtwoord" value={pin} onChange={e=>setPin(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&handleLogin()}
             style={{padding:'0.6rem',borderRadius:'6px',border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',fontSize:'1rem',textAlign:'center',letterSpacing:'0.3em'}}/>
           {error&&<div style={{color:'#f87171',fontSize:'0.8rem',textAlign:'center'}}>{error}</div>}

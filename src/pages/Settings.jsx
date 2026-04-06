@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { auth } from '../auth'
 
 const ALL_PAGES = [
   { path: '/', label: 'Dashboard', icon: '◉' },
@@ -14,8 +15,12 @@ const USERS = ['Tein', 'Sam', 'Productie']
 export default function Settings({ user }) {
   const [settings, setSettings] = useState(null)
   const [saved, setSaved] = useState(false)
-  const [pinForm, setPinForm] = useState({ current: '', next: '', confirm: '' })
-  const [pinMsg, setPinMsg] = useState(null)
+  const [pwForms, setPwForms] = useState({
+    Tein: { next: '', confirm: '' },
+    Sam: { next: '', confirm: '' },
+    Productie: { next: '', confirm: '' }
+  })
+  const [pwMsgs, setPwMsgs] = useState({})
 
   useEffect(() => {
     const data = localStorage.getItem('artazest_settings')
@@ -31,12 +36,18 @@ export default function Settings({ user }) {
 
   if (!settings) return null
   const isAdmin = user?.role === 'admin'
-  if (!isAdmin) return <div style={{padding:'3rem',textAlign:'center',color:'var(--text-secondary)'}}>Alleen admins kunnen instellingen wijzigen.</div>
+  if (!isAdmin) return (
+    <div style={{padding:'3rem',textAlign:'center',color:'var(--text-secondary)'}}>
+      Alleen admins kunnen instellingen wijzigen.
+    </div>
+  )
 
   const togglePage = (userName, path) => {
     const updated = { ...settings }
     const pages = updated.roles[userName]?.pages || []
-    updated.roles[userName].pages = pages.includes(path) ? pages.filter(p => p !== path) : [...pages, path]
+    updated.roles[userName].pages = pages.includes(path)
+      ? pages.filter(p => p !== path)
+      : [...pages, path]
     setSettings(updated); setSaved(false)
   }
 
@@ -45,21 +56,24 @@ export default function Settings({ user }) {
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  const handlePinChange = () => {
-    const storedPin = localStorage.getItem('artazest_pin') || '2026'
-    if (pinForm.current !== storedPin) { setPinMsg({ ok: false, text: 'Huidige PIN klopt niet' }); return }
-    if (pinForm.next.length < 3) { setPinMsg({ ok: false, text: 'PIN moet minimaal 3 tekens zijn' }); return }
-    if (pinForm.next !== pinForm.confirm) { setPinMsg({ ok: false, text: 'PINs komen niet overeen' }); return }
-    localStorage.setItem('artazest_pin', pinForm.next)
-    setPinMsg({ ok: true, text: 'PIN gewijzigd ✓' })
-    setPinForm({ current: '', next: '', confirm: '' })
-    setTimeout(() => setPinMsg(null), 3000)
+  const handlePwChange = (name) => {
+    const f = pwForms[name]
+    if (!f.next || f.next.length < 3) {
+      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Min. 3 tekens' } }); return
+    }
+    if (f.next !== f.confirm) {
+      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Wachtwoorden komen niet overeen' } }); return
+    }
+    auth.changePassword(name, f.next)
+    setPwMsgs({ ...pwMsgs, [name]: { ok: true, text: 'Opgeslagen ✓' } })
+    setPwForms({ ...pwForms, [name]: { next: '', confirm: '' } })
+    setTimeout(() => setPwMsgs(m => ({ ...m, [name]: null })), 3000)
   }
 
   return (
     <>
       <div className="page-header">
-        <div><h1>Instellingen</h1><p className="page-subtitle">Toegang en beveiliging beheren</p></div>
+        <div><h1>Instellingen</h1><p className="page-subtitle">Toegang en wachtwoorden beheren</p></div>
         <button className="btn btn-primary" onClick={handleSave}>{saved ? 'Opgeslagen ✓' : 'Opslaan'}</button>
       </div>
 
@@ -71,7 +85,9 @@ export default function Settings({ user }) {
             <thead>
               <tr>
                 <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.72rem' }}>Pagina</th>
-                {USERS.map(u => <th key={u} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{u}</th>)}
+                {USERS.map(u => (
+                  <th key={u} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{u}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -101,31 +117,55 @@ export default function Settings({ user }) {
         </div>
       </div>
 
-      {/* PIN wijzigen */}
-      <div className="card" style={{ maxWidth: '400px' }}>
-        <h3 className="section-title" style={{ marginBottom: '1rem' }}>Team PIN wijzigen</h3>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Één gedeelde PIN voor alle teamleden (Tein, Sam, Productie).</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-          {[
-            ['current', 'Huidige PIN'],
-            ['next', 'Nieuwe PIN'],
-            ['confirm', 'Bevestig nieuwe PIN'],
-          ].map(([key, label]) => (
-            <div key={key} className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">{label}</label>
-              <input type="password" className="form-input" value={pinForm[key]}
-                onChange={e => setPinForm({ ...pinForm, [key]: e.target.value })}
-                onKeyDown={e => e.key === 'Enter' && handlePinChange()}
-                placeholder="••••"
-                style={{ letterSpacing: '0.25em', maxWidth: '160px' }} />
-            </div>
-          ))}
-          {pinMsg && (
-            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: pinMsg.ok ? '#059669' : '#DC2626', padding: '0.35rem 0.5rem', borderRadius: '6px', background: pinMsg.ok ? '#F0FDF4' : '#FEF2F2' }}>
-              {pinMsg.text}
-            </div>
-          )}
-          <button className="btn btn-primary" onClick={handlePinChange} style={{ alignSelf: 'flex-start' }}>PIN wijzigen</button>
+      {/* Wachtwoorden per gebruiker */}
+      <div className="card">
+        <h3 className="section-title" style={{ marginBottom: '0.25rem' }}>Wachtwoorden</h3>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+          Elke gebruiker heeft een eigen wachtwoord. Standaard is alles "2026".
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          {USERS.map(name => {
+            const f = pwForms[name]
+            const msg = pwMsgs[name]
+            return (
+              <div key={name} style={{ padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: name === 'Tein' ? 'var(--accent)' : '#78716C', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
+                    {name.slice(0,2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{name}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{name === 'Tein' ? 'Admin' : 'Team'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.2rem' }}>Nieuw wachtwoord</label>
+                    <input type="password" value={f.next}
+                      onChange={e => setPwForms({ ...pwForms, [name]: { ...f, next: e.target.value } })}
+                      placeholder="••••••" className="form-input"
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.55rem', letterSpacing: '0.15em' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.2rem' }}>Bevestig</label>
+                    <input type="password" value={f.confirm}
+                      onChange={e => setPwForms({ ...pwForms, [name]: { ...f, confirm: e.target.value } })}
+                      onKeyDown={e => e.key === 'Enter' && handlePwChange(name)}
+                      placeholder="••••••" className="form-input"
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.55rem', letterSpacing: '0.15em' }} />
+                  </div>
+                  {msg && (
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: msg.ok ? '#059669' : '#DC2626', padding: '0.25rem 0.4rem', borderRadius: '5px', background: msg.ok ? '#F0FDF4' : '#FEF2F2' }}>
+                      {msg.text}
+                    </div>
+                  )}
+                  <button onClick={() => handlePwChange(name)} className="btn btn-sm btn-outline" style={{ marginTop: '0.1rem', fontSize: '0.73rem' }}>
+                    Opslaan
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </>
