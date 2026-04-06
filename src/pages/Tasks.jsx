@@ -89,7 +89,7 @@ function WekelijkseTodos() {
         <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'12px',boxShadow:'0 8px 24px rgba(0,0,0,0.12)',padding:'0.75rem',minWidth:'280px',maxHeight:'400px',overflowY:'auto'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.6rem'}}>
             <div>
-              <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Wekelijkse to-do&apos;s</span>
+              <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Wekelijkse to-dos</span>
               <div style={{fontSize:'0.62rem',color:'var(--text-secondary)',marginTop:'0.05rem'}}>Reset elke week automatisch</div>
             </div>
             <button onClick={()=>setShowPanel(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
