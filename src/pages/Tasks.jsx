@@ -266,7 +266,7 @@ function DagelijkseCheckinsCompact() {
                       onBlur={()=>setEditStatus(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
                       placeholder="bezig met..." style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.62rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}/>
                   ) : (
-                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.62rem',color:item.status?'var(--text-secondary)':'#D1C4B8',fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>
+                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.68rem',color:item.status?'var(--text-primary)':'#D1C4B8',fontWeight:item.status?700:400,fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block',background:item.status?'var(--bg-secondary)':'none',padding:item.status?'0.05rem 0.3rem':'0',borderRadius:'4px'}}>
                       {item.status||'+ status'}
                     </span>
                   )}
