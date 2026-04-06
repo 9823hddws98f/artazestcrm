@@ -856,6 +856,163 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
   )
 }
 
+// ─── KALENDER VIEW ──────────────────────────────────────────────────────────
+function KalenderView({ tasks, onTaskClick, onAddTask }) {
+  const [current, setCurrent] = useState(new Date())
+  const year = current.getFullYear()
+  const month = current.getMonth()
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const today = new Date().toISOString().slice(0,10)
+  const monthName = current.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+  const pad = firstDay === 0 ? 6 : firstDay - 1 // maandag start
+
+  const days = []
+  for (let i = 0; i < pad; i++) days.push(null)
+  for (let i = 1; i <= daysInMonth; i++) days.push(i)
+
+  const taskForDay = (day) => {
+    if (!day) return []
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+    return tasks.filter(t => (t.dueDate===iso||t.plannedDate===iso) && t.status!=='klaar' && !t.archived)
+  }
+
+  const dayNames = ['Ma','Di','Wo','Do','Vr','Za','Zo']
+
+  return (
+    <div className="card">
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1rem'}}>
+        <button onClick={()=>setCurrent(new Date(year,month-1,1))} className="btn btn-sm btn-outline">←</button>
+        <span style={{fontFamily:'var(--font-display)',fontSize:'1.1rem',fontWeight:600,textTransform:'capitalize'}}>{monthName}</span>
+        <button onClick={()=>setCurrent(new Date(year,month+1,1))} className="btn btn-sm btn-outline">→</button>
+      </div>
+      {/* Dag headers */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'0.25rem',marginBottom:'0.25rem'}}>
+        {dayNames.map(d=><div key={d} style={{textAlign:'center',fontSize:'0.65rem',fontWeight:700,color:'var(--text-secondary)',padding:'0.25rem 0'}}>{d}</div>)}
+      </div>
+      {/* Dagen */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'0.25rem'}}>
+        {days.map((day, i) => {
+          if (!day) return <div key={`e${i}`}/>
+          const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+          const isToday = iso === today
+          const dayTasks = taskForDay(day)
+          const hasUrgent = dayTasks.some(t=>t.priority==='high'||t.isMIT)
+          return (
+            <div key={day}
+              onClick={()=>onAddTask(iso)}
+              style={{minHeight:'72px',borderRadius:'8px',border:isToday?'2px solid #D97706':'1px solid var(--border)',background:isToday?'#FFF7ED':'var(--bg-secondary)',padding:'0.3rem',cursor:'pointer',transition:'all 0.1s'}}
+              onMouseEnter={e=>e.currentTarget.style.background='var(--bg-card)'}
+              onMouseLeave={e=>e.currentTarget.style.background=isToday?'#FFF7ED':'var(--bg-secondary)'}>
+              <div style={{fontSize:'0.72rem',fontWeight:isToday?700:400,color:isToday?'#D97706':'var(--text-primary)',marginBottom:'0.2rem',display:'flex',justifyContent:'space-between'}}>
+                {day}
+                {hasUrgent && <span style={{fontSize:'0.6rem'}}>🔥</span>}
+              </div>
+              {dayTasks.slice(0,3).map(t=>(
+                <div key={t.id} onClick={e=>{e.stopPropagation();onTaskClick(t)}}
+                  style={{fontSize:'0.6rem',padding:'0.1rem 0.25rem',borderRadius:'3px',marginBottom:'0.1rem',background:t.isMIT?'#FEE2E2':t.priority==='high'?'#FEF3C7':'rgba(28,25,23,0.07)',color:t.isMIT?'#991B1B':t.priority==='high'?'#92400E':'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer',fontWeight:500}}>
+                  {t.title}
+                </div>
+              ))}
+              {dayTasks.length>3&&<div style={{fontSize:'0.55rem',color:'var(--text-secondary)'}}>+{dayTasks.length-3}</div>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── INBOX (floating quick capture) ─────────────────────────────────────────
+function InboxCapture({ onAdd, user }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const submit = async () => {
+    if (!title.trim()) return
+    await api.save('tasks', {
+      id: `inbox-${Date.now()}`,
+      title: title.trim(),
+      category: 'Overig', assignee: user?.name||'Tein',
+      status: 'todo', priority: 'normal',
+      notes: '', dueDate: '', plannedDate: '', tags: [], subtasks: [],
+      estimatedHours: 0, energyLevel: 'middel', recurring: 'nooit', isMIT: false,
+      createdAt: new Date().toISOString()
+    })
+    setTitle(''); setOpen(false)
+  }
+  return (
+    <div style={{position:'fixed',bottom:'1.5rem',right:'1.5rem',zIndex:888}}>
+      {open && (
+        <div style={{position:'absolute',bottom:'3.5rem',right:0,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'12px',boxShadow:'0 8px 32px rgba(0,0,0,0.15)',padding:'1rem',width:'280px'}}>
+          <div style={{fontSize:'0.7rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',marginBottom:'0.5rem'}}>📥 Inbox — snel toevoegen</div>
+          <input autoFocus value={title} onChange={e=>setTitle(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter')submit();if(e.key==='Escape')setOpen(false)}}
+            placeholder="Idee, taak, herinnering..." className="form-input"
+            style={{width:'100%',marginBottom:'0.5rem',fontSize:'0.85rem'}}/>
+          <div style={{display:'flex',gap:'0.4rem'}}>
+            <button onClick={submit} className="btn btn-primary" style={{flex:1,fontSize:'0.78rem'}}>Toevoegen</button>
+            <button onClick={()=>setOpen(false)} className="btn btn-outline" style={{fontSize:'0.78rem'}}>✕</button>
+          </div>
+          <div style={{fontSize:'0.65rem',color:'var(--text-secondary)',marginTop:'0.4rem'}}>Komt als "To do" in Overig — later categoriseren</div>
+        </div>
+      )}
+      <button onClick={()=>setOpen(!open)}
+        title="Inbox — snel idee toevoegen"
+        style={{width:'48px',height:'48px',borderRadius:'50%',background:open?'var(--text-primary)':'var(--accent)',border:'none',cursor:'pointer',fontSize:'1.3rem',boxShadow:'0 4px 16px rgba(0,0,0,0.2)',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s'}}>
+        {open?'✕':'📥'}
+      </button>
+    </div>
+  )
+}
+
+// ─── REACTIES PER TAAK ───────────────────────────────────────────────────────
+function TaskComments({ taskId, user }) {
+  const [comments, setComments] = useState([])
+  const [text, setText] = useState('')
+  const load = async () => {
+    const all = await api.getAll('comments')
+    setComments(all.filter(c => c.taskId === taskId).sort((a,b)=>a.createdAt>b.createdAt?1:-1))
+  }
+  useEffect(()=>{ if(taskId) load() },[taskId])
+
+  const add = async () => {
+    if (!text.trim()) return
+    await api.save('comments', {
+      id: `cmt-${Date.now()}`, taskId,
+      author: user?.name||'Tein', body: text.trim(),
+      createdAt: new Date().toISOString()
+    })
+    setText(''); load()
+  }
+
+  const fmt = d => new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+
+  return (
+    <div>
+      <div style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',marginBottom:'0.5rem'}}>Opmerkingen</div>
+      {comments.length===0&&<div style={{fontSize:'0.75rem',color:'var(--text-secondary)',marginBottom:'0.5rem',fontStyle:'italic'}}>Nog geen opmerkingen</div>}
+      <div style={{display:'flex',flexDirection:'column',gap:'0.4rem',marginBottom:'0.5rem',maxHeight:'150px',overflowY:'auto'}}>
+        {comments.map(cm=>(
+          <div key={cm.id} style={{padding:'0.4rem 0.55rem',borderRadius:'8px',background:'var(--bg-secondary)',border:'1px solid var(--border)'}}>
+            <div style={{display:'flex',gap:'0.4rem',alignItems:'center',marginBottom:'0.15rem'}}>
+              <span style={{fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}>{cm.author}</span>
+              <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{fmt(cm.createdAt)}</span>
+            </div>
+            <div style={{fontSize:'0.78rem',color:'var(--text-primary)',lineHeight:1.4}}>{cm.body}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:'0.4rem'}}>
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&(e.preventDefault(),add())}
+          placeholder="Reactie toevoegen (Enter)..." className="form-input" style={{flex:1,fontSize:'0.78rem',padding:'0.35rem 0.5rem'}}/>
+        <button onClick={add} className="btn btn-sm btn-outline" style={{flexShrink:0}}>↵</button>
+      </div>
+    </div>
+  )
+}
+
+
 export default function Tasks({ user }) {
   const [tasks,setTasks]=useState([])
   const [view,setView]=useState('kanban')
@@ -867,7 +1024,7 @@ export default function Tasks({ user }) {
   const [draggedId,setDraggedId]=useState(null)
   const [undoToast,setUndoToast]=useState(null) // {id, title, timer}
   const [confirmArchive,setConfirmArchive]=useState(null) // {id, title}
-  const [form,setForm]=useState({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[]})
+  const [form,setForm]=useState({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
   const [tagInput,setTagInput]=useState('')
   const [subtaskInput,setSubtaskInput]=useState('')
   const subtaskInputRef=useRef(null)
@@ -902,9 +1059,9 @@ export default function Tasks({ user }) {
   useEffect(()=>{reload()},[])
   const reload=()=>api.getAll('tasks').then(setTasks)
   const handleSave=async()=>{if(!form.title.trim())return;await api.save('tasks',{...form,...(editing?{id:editing}:{}),createdAt:form.createdAt||new Date().toISOString()});resetForm();setShowAdd(false);setEditing(null);reload()}
-  const resetForm=()=>setForm({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[]})
+  const resetForm=()=>setForm({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
-  const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||''});setEditing(t.id);setShowAdd(true)}
+  const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||'',estimatedHours:t.estimatedHours||0,energyLevel:t.energyLevel||'middel',recurring:t.recurring||'nooit',isMIT:t.isMIT||false});setEditing(t.id);setShowAdd(true)}
   const updateStatus=async(id,status)=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,status,completed:status==='klaar'});reload()}}
   const reorderInColumn=async(taskId, newIdx, columnKey)=>{
     // Haal alle taken van deze kolom op in huidige volgorde
@@ -955,7 +1112,7 @@ export default function Tasks({ user }) {
   const filtered=active.filter(t=>filterUser==='all'||t.assignee===filterUser).sort((a,b)=>{const p={high:0,normal:1};if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1);if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1;if(a.dueDate&&!b.dueDate)return -1;if(!a.dueDate&&b.dueDate)return 1;return 0})
   const archived=tasks.filter(t=>t.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0))
   const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig'||t.status==='in-uitvoering').length,klaar:filtered.filter(t=>t.status==='klaar').length}
-  const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'archief',label:`Archief (${archived.length})`}]
+  const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'kalender',label:'Kalender'},{key:'archief',label:`Archief (${archived.length})`}]
 
   return (
     <>
@@ -999,7 +1156,8 @@ export default function Tasks({ user }) {
               {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)}/>))}
             </div>
           ):view==='archief'?(
-            archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:
+            view==='kalender' ? <KalenderView tasks={filtered} onTaskClick={startEdit} onAddTask={(date)=>{resetForm();setForm(f=>({...f,dueDate:date}));setShowAdd(true)}}/> :
+          archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:
             <div className="task-list">{archived.map(t=>(<div key={t.id} className="task-item" style={{opacity:0.6}}><div style={{flex:1}}><div className="task-title" style={{textDecoration:'line-through'}}>{t.title}</div><div className="task-meta">{t.assignee} &middot; {t.archivedAt&&fmt(t.archivedAt)}</div></div><button className="btn btn-sm btn-outline" onClick={async()=>{const x=tasks.find(a=>a.id===t.id);if(x){await api.save('tasks',{...x,archived:false});reload()}}} style={{fontSize:'0.7rem'}}>Terugzetten</button></div>))}</div>
           ):(
             filtered.length===0?<div className="card"><div className="empty-state">Geen taken{filterUser!=='all'?` voor ${filterUser}`:''}</div></div>:

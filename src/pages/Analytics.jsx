@@ -61,6 +61,7 @@ export default function Analytics() {
 
   const tabs = [
     { key: 'overzicht', label: 'Overzicht' },
+    { key: 'productiviteit', label: 'Productiviteit' },
     { key: 'investeringen', label: 'Investeringen' },
     { key: 'breakeven', label: 'Break-even' },
     { key: 'cashflow', label: 'Cash flow' },
@@ -74,6 +75,7 @@ export default function Analytics() {
         {tabs.map(t => <button key={t.key} className={`tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>
       {tab === 'overzicht' && <OverviewTab {...{ totalInv, burnRate, runway, cfg, saveCfg, byCategory, maxCat, investments, liveMetrics, saveLiveMetrics }} />}
+      {tab === 'productiviteit' && <ProductiviteitTab/>}
       {tab === 'investeringen' && <InvestmentsTab {...{ investments, setInvestments, budgets, setBudgets, showModal, setShowModal, editItem, setEditItem }} />}
       {tab === 'breakeven' && <BreakevenTab cfg={cfg} />}
       {tab === 'cashflow' && <CashflowTab {...{ cfg, saveCfg, totalInv }} />}
@@ -516,6 +518,113 @@ function CashflowTab({ cfg, saveCfg, totalInv }) {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ========== PRODUCTIVITEIT ========== */
+function ProductiviteitTab() {
+  const [tasks, setTasks] = useState([])
+  useEffect(() => { api.getAll('tasks').then(setTasks) }, [])
+
+  const ASSIGNEES = ['Tein', 'Sam', 'Productie']
+  const now = new Date()
+
+  // Voltooiingssnelheid: taken gesloten per week (laatste 4 weken)
+  const weeksData = Array.from({length:4},(_,wi)=>{
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - (wi+1)*7)
+    const weekEnd = new Date(now); weekEnd.setDate(now.getDate() - wi*7)
+    const done = tasks.filter(t => t.status==='klaar' && t.archivedAt && new Date(t.archivedAt)>=weekStart && new Date(t.archivedAt)<weekEnd)
+    return { label: `Week ${4-wi}`, count: done.length }
+  }).reverse()
+
+  // Bottleneck: taken die het langst open staan
+  const openTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && t.createdAt)
+  const bottleneck = [...openTasks].sort((a,b) => new Date(a.createdAt)-new Date(b.createdAt)).slice(0,8)
+
+  // Per-persoon stats
+  const personStats = ASSIGNEES.map(name => {
+    const mine = tasks.filter(t => t.assignee===name && !t.archived)
+    const done = mine.filter(t => t.status==='klaar').length
+    const open = mine.filter(t => t.status!=='klaar').length
+    const urgent = mine.filter(t => t.status!=='klaar' && t.priority==='high').length
+    const overdue = mine.filter(t => { if(!t.dueDate||t.status==='klaar') return false; return new Date(t.dueDate)<now }).length
+    const totalEst = mine.reduce((s,t)=>s+(t.estimatedHours||0),0)
+    return { name, done, open, urgent, overdue, total: mine.length, totalEst }
+  })
+
+  const daysSince = d => Math.ceil((now - new Date(d)) / (1000*60*60*24))
+  const fmt = n => new Intl.NumberFormat('nl-NL').format(n)
+  const maxWeek = Math.max(...weeksData.map(w=>w.count),1)
+
+  return (
+    <>
+      {/* Per persoon */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1rem',marginBottom:'1.5rem'}}>
+        {personStats.map(p=>(
+          <div key={p.name} className="card">
+            <div style={{fontWeight:700,fontSize:'0.95rem',marginBottom:'0.75rem'}}>{p.name}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.75rem'}}>
+              {[['Klaar',p.done,'#059669'],['Open',p.open,'var(--text-primary)'],['Urgent',p.urgent,'#DC2626'],['Te laat',p.overdue,'#D97706']].map(([l,v,col])=>(
+                <div key={l} style={{background:'var(--bg-secondary)',borderRadius:'8px',padding:'0.5rem',textAlign:'center'}}>
+                  <div style={{fontSize:'1.4rem',fontFamily:'var(--font-display)',fontWeight:700,color:col}}>{v}</div>
+                  <div style={{fontSize:'0.65rem',color:'var(--text-secondary)',textTransform:'uppercase',fontWeight:600,letterSpacing:'0.05em'}}>{l}</div>
+                </div>
+              ))}
+            </div>
+            {p.total>0&&(
+              <>
+                <div style={{height:'6px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden',marginBottom:'0.35rem'}}>
+                  <div style={{height:'100%',width:`${Math.round(p.done/p.total*100)}%`,background:'#059669',borderRadius:'99px'}}/>
+                </div>
+                <div style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>{Math.round(p.done/p.total*100)}% voltooid{p.totalEst>0?` · ${p.totalEst}u gepland`:''}</div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1.25rem'}}>
+        {/* Voltooiingssnelheid */}
+        <div className="card">
+          <h3 className="section-title" style={{marginBottom:'1rem'}}>Voltooiingssnelheid (laatste 4 weken)</h3>
+          {weeksData.every(w=>w.count===0) ? (
+            <div className="empty-state">Nog geen gesloten taken met datum</div>
+          ) : (
+            <div style={{display:'flex',gap:'0.75rem',alignItems:'flex-end',height:'120px'}}>
+              {weeksData.map(w=>(
+                <div key={w.label} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'0.3rem',justifyContent:'flex-end',height:'100%'}}>
+                  <div style={{fontSize:'0.75rem',fontWeight:700,color:'var(--text-primary)'}}>{w.count}</div>
+                  <div style={{width:'100%',borderRadius:'6px 6px 0 0',background:'var(--accent)',height:`${Math.round(w.count/maxWeek*100)}%`,minHeight:w.count>0?'8px':'0',transition:'height 0.5s'}}/>
+                  <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{w.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bottleneck */}
+        <div className="card">
+          <h3 className="section-title" style={{marginBottom:'1rem'}}>Bottleneck — langst open</h3>
+          {bottleneck.length===0 ? <div className="empty-state">Geen open taken</div> : (
+            <div style={{display:'flex',flexDirection:'column',gap:'0.35rem'}}>
+              {bottleneck.map(t=>{
+                const days = daysSince(t.createdAt)
+                const col = days>14?'#DC2626':days>7?'#D97706':'var(--text-secondary)'
+                return (
+                  <div key={t.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.35rem 0.5rem',borderRadius:'6px',background:'var(--bg-secondary)'}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:'0.78rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</div>
+                      <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{t.assignee} · {t.category}</div>
+                    </div>
+                    <span style={{fontSize:'0.7rem',fontWeight:700,color:col,whiteSpace:'nowrap'}}>{days}d open</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </>
