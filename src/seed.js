@@ -85,9 +85,9 @@ const SEED_INVENTORY = [
 
 const SEED_SETTINGS = {
   roles: {
-    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/content', '/catalog', '/analytics', '/settings'] },
-    Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
-    Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
+    Tein: { role: 'admin', pages: ['/', '/tasks', '/inventory', '/orders', '/launch', '/content', '/catalog', '/analytics', '/settings'] },
+    Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog', '/orders'] },
+    Productie: { role: 'team', pages: ['/', '/tasks', '/inventory', '/orders'] },
   }
 }
 

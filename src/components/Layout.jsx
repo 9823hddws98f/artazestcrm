@@ -20,7 +20,8 @@ export default function Layout({ user, onLogout, children }) {
   const role = user?.role || 'team'
   const settings = JSON.parse(localStorage.getItem('artazest_settings') || '{}')
   const allPages = allNavItems.map(i => i.path)
-  const userPages = settings.roles?.[name]?.pages || (role === 'admin' ? allPages : ['/', '/tasks'])
+  const savedPages = settings.roles?.[name]?.pages
+  const userPages = role === 'admin' ? allPages : (savedPages || ['/', '/tasks'])
   const navItems = allNavItems.filter(item => userPages.includes(item.path))
   return (
     <div className="app-layout">
