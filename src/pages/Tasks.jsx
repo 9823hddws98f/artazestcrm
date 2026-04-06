@@ -231,19 +231,19 @@ function DagelijkseCheckinsCompact() {
           </div>
         )
       })}
-        <div style={{padding:'0.5rem',borderRadius:'8px',border:'1px dashed var(--accent)',background:'var(--accent-light)',display:'flex',flexDirection:'column',gap:'0.3rem'}}>
-          <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
-            placeholder="Naam..." className="form-input" style={{fontSize:'0.78rem',padding:'0.3rem 0.5rem'}}/>
-          <div style={{display:'flex',gap:'0.3rem'}}>
-            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} className="form-select" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem',flex:1}}>
+        <div style={{padding:'0.35rem 0.45rem',borderRadius:'6px',border:'1px solid var(--border)',background:'var(--bg-secondary)',display:'flex',flexDirection:'column',gap:'0.2rem'}}>
+          <div style={{display:'flex',gap:'0.25rem',alignItems:'center'}}>
+            <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
+              placeholder="Naam..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.75rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)',minWidth:0}}/>
+            <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.65rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
               {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
             </select>
           </div>
-          <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
-            placeholder="Onderwerp (optioneel)" className="form-input" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}/>
-          <div style={{display:'flex',gap:'0.3rem'}}>
-            <button onClick={add} className="btn btn-primary" style={{flex:1,fontSize:'0.72rem',padding:'0.3rem'}}>+ Toevoegen</button>
-            <button onClick={()=>setShowAdd(false)} className="btn btn-outline" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}>✕</button>
+          <div style={{display:'flex',gap:'0.25rem',alignItems:'center'}}>
+            <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()}
+              placeholder="Onderwerp..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.68rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',minWidth:0}}/>
+            <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'4px',fontSize:'0.62rem',padding:'0.12rem 0.4rem',cursor:'pointer',fontWeight:600,whiteSpace:'nowrap',flexShrink:0}}>+ Toevoegen</button>
+            <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem',padding:0,flexShrink:0}}>✕</button>
           </div>
         </div>
       )}
@@ -743,6 +743,9 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
 }
 
 function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder}) {
+  // Gebruik ref voor draggedId om stale closure te voorkomen
+  const draggedIdRef = React.useRef(null)
+  React.useEffect(()=>{ draggedIdRef.current = draggedId },[draggedId])
   const [dropIdx, setDropIdx] = useState(null) // index waar de lijn verschijnt
   const dropRef = React.useRef(null)
   const cardRefs = React.useRef([])
@@ -778,21 +781,19 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
           setDropIdx(getDropIndex(e))
         }}
         onDragLeave={e=>{
-          if(dropRef.current && !dropRef.current.contains(e.relatedTarget)) setDropIdx(null)
+          if(!e.relatedTarget || (dropRef.current && !dropRef.current.contains(e.relatedTarget))) setDropIdx(null)
         }}
         onDrop={e=>{
           e.preventDefault(); e.stopPropagation()
-          const id = e.dataTransfer.getData('text/plain') || draggedId
+          // Pak id via dataTransfer (meest betrouwbaar), dan ref, dan prop
+          const id = e.dataTransfer.getData('text/plain') || draggedIdRef.current || draggedId
           const idx = getDropIndex(e)
           setDropIdx(null)
           if (!id) return
-          // Check of de kaart al in deze kolom zit
           const existingIdx = tasks.findIndex(t => t.id === id)
           if (existingIdx !== -1) {
-            // Reorder binnen kolom
             onReorder && onReorder(id, idx)
           } else {
-            // Verplaats van andere kolom
             onDrop(status.key, id)
           }
         }}
