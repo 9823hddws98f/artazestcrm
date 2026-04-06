@@ -114,68 +114,133 @@ function DagelijkseCheckins() {
 }
 
 
-function Timeline({ tasks, onDropDay, draggedId, onTaskClick }) {
+function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
   const today = new Date(); today.setHours(0,0,0,0)
   const DAYS = 14
-  const DAY_W = 56
-  const LANE_H = 48  // hoogte per swimlane
   const BAR_H = 14
+  const LANES = ['Tein','Sam','Productie']
   const days = Array.from({length:DAYS},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()+i); return d })
-  const toISO = d => d.toISOString().slice(0,10)
+  const toISO = d => new Date(d).toISOString().slice(0,10)
   const todayStr = toISO(today)
   const launchStr = '2026-04-18'
   const [overDay, setOverDay] = useState(null)
   const [tooltip, setTooltip] = useState(null)
-  const LANES = ['Tein','Sam','Productie']
+  const [dragging, setDragging] = useState(null) // {taskId, type:'move'|'resize', startX, origStart, origEnd}
+  const containerRef = useRef(null)
   const statusColor = { todo:'#9CA3AF', gepland:'#2563EB', bezig:'#D97706', klaar:'#059669' }
   const launchIdx = Math.round((new Date(launchStr) - today)/(1000*60*60*24))
   const dayIdx = iso => Math.round((new Date(iso) - today)/(1000*60*60*24))
 
-  const ganttTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && (t.plannedDate||t.dueDate))
-
-  // Bereken bar positie & breedte
-  const getBar = t => {
-    const si = Math.max(0, dayIdx(t.plannedDate||t.dueDate))
-    const ei = Math.min(DAYS-1, dayIdx(t.dueDate||t.plannedDate))
-    if (si > DAYS-1) return null
-    return { left: si*DAY_W+2, width: Math.max(DAY_W-6, (ei-si+1)*DAY_W-4) }
+  const addDays = (iso, n) => {
+    const d = new Date(iso); d.setDate(d.getDate()+n); return toISO(d)
   }
 
-  // Bereken welke rij (track) een taak krijgt binnen een lane (simpele collision detection)
+  const ganttTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && (t.plannedDate||t.dueDate))
+
   const getTrack = (laneTasks, taskIdx) => {
     const t = laneTasks[taskIdx]
-    const bar = getBar(t); if(!bar) return 0
-    for (let track=0; track<4; track++) {
+    const si = Math.max(0, dayIdx(t.plannedDate||t.dueDate))
+    const ei = Math.min(DAYS-1, dayIdx(t.dueDate||t.plannedDate))
+    for (let track=0; track<6; track++) {
       const conflict = laneTasks.slice(0,taskIdx).some((other,i) => {
         if (getTrack(laneTasks,i)!==track) return false
-        const ob = getBar(other); if(!ob) return false
-        return bar.left < ob.left+ob.width && bar.left+bar.width > ob.left
+        const osi = Math.max(0,dayIdx(other.plannedDate||other.dueDate))
+        const oei = Math.min(DAYS-1,dayIdx(other.dueDate||other.plannedDate))
+        return si <= oei && ei >= osi
       })
       if(!conflict) return track
     }
     return 0
   }
 
+  // Mouse drag handlers
+  const handleBarMouseDown = (e, task, type) => {
+    e.preventDefault(); e.stopPropagation()
+    setDragging({
+      taskId: task.id, type,
+      startX: e.clientX,
+      origStart: task.plannedDate || task.dueDate,
+      origEnd: task.dueDate || task.plannedDate
+    })
+  }
+
+  useEffect(() => {
+    if (!dragging) return
+    const container = containerRef.current
+    if (!container) return
+    const colW = container.offsetWidth / DAYS
+
+    const onMove = e => {
+      const dx = e.clientX - dragging.startX
+      const deltaDays = Math.round(dx / colW)
+      if (deltaDays === 0) return
+      const task = tasks.find(t => t.id === dragging.taskId)
+      if (!task) return
+
+      let newStart = dragging.origStart, newEnd = dragging.origEnd
+      if (dragging.type === 'move') {
+        newStart = addDays(dragging.origStart, deltaDays)
+        newEnd = addDays(dragging.origEnd, deltaDays)
+      } else if (dragging.type === 'resize') {
+        newEnd = addDays(dragging.origEnd, deltaDays)
+        if (new Date(newEnd) < new Date(newStart)) newEnd = newStart
+      }
+      setTooltip({ title: `${newStart} → ${newEnd}`, x: e.clientX, y: e.clientY, isDrag: true })
+    }
+
+    const onUp = e => {
+      const dx = e.clientX - dragging.startX
+      const task = tasks.find(t => t.id === dragging.taskId)
+      if (!task) { setDragging(null); setTooltip(null); return }
+      const container = containerRef.current
+      const colW2 = container ? container.offsetWidth / DAYS : 60
+      const deltaDays = Math.round(dx / colW2)
+
+      if (Math.abs(deltaDays) < 1) {
+        // Geen drag → click → open edit
+        onTaskClick && onTaskClick(task)
+      } else {
+        let newStart = dragging.origStart, newEnd = dragging.origEnd
+        if (dragging.type === 'move') {
+          newStart = addDays(dragging.origStart, deltaDays)
+          newEnd = addDays(dragging.origEnd, deltaDays)
+        } else {
+          newEnd = addDays(dragging.origEnd, deltaDays)
+          if (new Date(newEnd) < new Date(newStart)) newEnd = newStart
+        }
+        onTaskUpdate && onTaskUpdate(task, newStart, newEnd)
+      }
+      setDragging(null); setTooltip(null)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [dragging, tasks])
+
   return (
-    <div style={{marginBottom:'1.25rem',border:'1px solid var(--border)',borderRadius:'10px',overflow:'hidden',background:'var(--bg-card)'}}>
+    <div style={{marginBottom:'1.25rem',border:'1px solid var(--border)',borderRadius:'10px',overflow:'hidden',background:'var(--bg-card)',userSelect:dragging?'none':'auto'}}>
       {/* DAG HEADER */}
       <div style={{display:'flex',borderBottom:'1px solid var(--border)',background:'var(--bg-secondary)'}}>
-        {days.map((day,i) => {
-          const iso=toISO(day); const isToday=iso===todayStr; const isLaunch=iso===launchStr
-          const isWeekend=day.getDay()===0||day.getDay()===6; const isOver=overDay===iso&&!!draggedId
-          return (
-            <div key={iso}
-              onDragOver={e=>{e.preventDefault();setOverDay(iso)}}
-              onDragLeave={()=>setOverDay(null)}
-              onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId)onDropDay(draggedId,iso)}}
-              style={{flex:1,padding:'0.28rem 0.1rem',textAlign:'center',borderRight:i<DAYS-1?'1px solid var(--border)':undefined,background:isOver?'#DBEAFE':isToday?'#FFF7ED':isLaunch?'#FEF3C7':isWeekend?'rgba(0,0,0,0.025)':'transparent',cursor:'default',transition:'background 0.1s',minWidth:0,position:'relative'}}>
-              <div style={{fontSize:'0.52rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isLaunch?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',lineHeight:1,letterSpacing:'0.03em'}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
-              <div style={{fontSize:'0.72rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#D97706':'var(--text-primary)',lineHeight:1.25}}>{day.getDate()}</div>
-              {isLaunch&&<div style={{fontSize:'0.45rem',color:'#D97706',fontWeight:700,letterSpacing:'0.02em'}}>launch</div>}
-              {isOver&&<div style={{position:'absolute',inset:0,border:'2px dashed #2563EB',borderRadius:'2px',pointerEvents:'none'}}/>}
-            </div>
-          )
-        })}
+        <div style={{width:'52px',flexShrink:0,borderRight:'1px solid var(--border)'}}/>
+        <div style={{flex:1,display:'flex'}}>
+          {days.map((day,i) => {
+            const iso=toISO(day); const isToday=iso===todayStr; const isLaunch=iso===launchStr
+            const isWeekend=day.getDay()===0||day.getDay()===6; const isOver=overDay===iso&&!!draggedId&&!dragging
+            return (
+              <div key={iso}
+                onDragOver={e=>{e.preventDefault();if(!dragging)setOverDay(iso)}}
+                onDragLeave={()=>setOverDay(null)}
+                onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId&&!dragging)onDropDay(draggedId,iso)}}
+                style={{flex:1,padding:'0.28rem 0.1rem',textAlign:'center',borderRight:i<DAYS-1?'1px solid var(--border)':undefined,background:isOver?'#DBEAFE':isToday?'#FFF7ED':isLaunch?'#FEF3C7':isWeekend?'rgba(0,0,0,0.025)':'transparent',cursor:'default',position:'relative'}}>
+                <div style={{fontSize:'0.52rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isLaunch?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',lineHeight:1}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
+                <div style={{fontSize:'0.72rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#D97706':'var(--text-primary)',lineHeight:1.25}}>{day.getDate()}</div>
+                {isLaunch&&<div style={{fontSize:'0.45rem',color:'#D97706',fontWeight:700}}>launch</div>}
+                {isOver&&<div style={{position:'absolute',inset:0,border:'2px dashed #2563EB',borderRadius:'2px',pointerEvents:'none'}}/>}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* SWIMLANES */}
@@ -185,70 +250,66 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick }) {
         const laneH = Math.max(36, (maxTrack+1)*(BAR_H+4)+10)
         return (
           <div key={lane} style={{display:'flex',alignItems:'stretch',borderBottom:li<LANES.length-1?'1px solid var(--border)':undefined}}>
-            {/* Lane label */}
-            <div style={{width:'52px',flexShrink:0,borderRight:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg-secondary)',padding:'0.2rem'}}>
-              <span style={{fontSize:'0.6rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.06em',writingMode:'horizontal-tb'}}>{lane}</span>
+            <div style={{width:'52px',flexShrink:0,borderRight:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg-secondary)'}}>
+              <span style={{fontSize:'0.58rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{lane}</span>
             </div>
-            {/* Bar area */}
-            <div style={{flex:1,position:'relative',height:laneH,overflow:'hidden'}}>
+            <div ref={li===0?containerRef:null} style={{flex:1,position:'relative',height:laneH,overflow:'hidden'}}>
               {/* Grid */}
-              <div style={{position:'absolute',inset:0,display:'flex'}}>
+              <div style={{position:'absolute',inset:0,display:'flex',pointerEvents:'none'}}>
                 {days.map((day,i)=>{
                   const iso=toISO(day); const isToday=iso===todayStr; const isWeekend=day.getDay()===0||day.getDay()===6; const isLaunch=iso===launchStr
                   return <div key={iso} style={{flex:1,height:'100%',borderRight:i<DAYS-1?'1px solid rgba(28,25,23,0.04)':undefined,background:isToday?'rgba(249,115,22,0.05)':isLaunch?'rgba(217,119,6,0.06)':isWeekend?'rgba(0,0,0,0.015)':'transparent'}}/>
                 })}
               </div>
-              {/* Vandaag lijn */}
-              <div style={{position:'absolute',left:`calc(0.5 * (100% / ${DAYS}))`,top:0,bottom:0,width:'1.5px',background:'#F97316',opacity:0.3,pointerEvents:'none'}}/>
-              {/* Launch lijn */}
-              {launchIdx>=0&&launchIdx<DAYS&&<div style={{position:'absolute',left:`calc((${launchIdx} + 0.5) * (100% / ${DAYS}))`,top:0,bottom:0,width:'1.5px',background:'#D97706',opacity:0.4,pointerEvents:'none'}}/>}
+              {/* Vandaag + launch lijnen */}
+              <div style={{position:'absolute',left:`calc(0.5/14*100%)`,top:0,bottom:0,width:'1.5px',background:'#F97316',opacity:0.3,pointerEvents:'none'}}/>
+              {launchIdx>=0&&launchIdx<DAYS&&<div style={{position:'absolute',left:`calc((${launchIdx}+0.5)/14*100%)`,top:0,bottom:0,width:'1.5px',background:'#D97706',opacity:0.4,pointerEvents:'none'}}/>}
+
               {/* Bars */}
               {laneTasks.map((task,ti)=>{
-                // Gebruik percentages ipv px voor responsive
                 const si=Math.max(0,dayIdx(task.plannedDate||task.dueDate))
                 const ei=Math.min(DAYS-1,dayIdx(task.dueDate||task.plannedDate))
-                if(si>DAYS-1) return null
+                if(si>DAYS-1||ei<0) return null
                 const track=getTrack(laneTasks,ti)
                 const color=task.priority==='high'?'#DC2626':statusColor[task.status]||'#9CA3AF'
                 const subs=task.subtasks||[]; const subPct=subs.length>0?Math.round(subs.filter(s=>s.completed).length/subs.length*100):null
                 const leftPct=(si/DAYS*100).toFixed(2)
                 const widthPct=((ei-si+1)/DAYS*100).toFixed(2)
                 const topPx=5+track*(BAR_H+4)
+                const isDraggingThis = dragging?.taskId===task.id
+
                 return (
-                  <div key={task.id}
-                    onMouseEnter={e=>setTooltip({title:task.title,x:e.clientX,y:e.clientY})}
-                    onMouseMove={e=>setTooltip(t=>t?{...t,x:e.clientX,y:e.clientY}:null)}
-                    onMouseLeave={()=>setTooltip(null)}
-                    onClick={()=>onTaskClick&&onTaskClick(task)} style={{position:'absolute',left:`${leftPct}%`,width:`calc(${widthPct}% - 3px)`,top:topPx,height:BAR_H,borderRadius:'3px',background:color,opacity:0.82,cursor:'pointer',overflow:'hidden',display:'flex',alignItems:'center',paddingLeft:'4px',transition:'opacity 0.1s',zIndex:2}} onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.25)'}} onMouseLeave={e=>{e.currentTarget.style.opacity='0.82';e.currentTarget.style.boxShadow='none'}}>
-                    {subPct!==null&&subPct>0&&(
-                      <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${subPct}%`,background:'rgba(255,255,255,0.22)',borderRadius:'3px 0 0 3px'}}/>
-                    )}
-                    <span style={{fontSize:'0.52rem',color:'#fff',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative',zIndex:1,lineHeight:1}}>{task.title.slice(0,18)}{task.title.length>18?'…':''}</span>
+                  <div key={task.id} style={{position:'absolute',left:`${leftPct}%`,width:`calc(${widthPct}% - 3px)`,top:topPx,height:BAR_H,borderRadius:'3px',background:color,opacity:isDraggingThis?0.5:0.85,cursor:dragging?'grabbing':'grab',overflow:'visible',display:'flex',alignItems:'center',zIndex:isDraggingThis?10:2,boxShadow:isDraggingThis?'0 3px 10px rgba(0,0,0,0.25)':'none',transition:'opacity 0.1s'}}
+                    onMouseDown={e=>handleBarMouseDown(e,task,'move')}
+                    onMouseEnter={e=>{if(!dragging)setTooltip({title:task.title,x:e.clientX,y:e.clientY})}}
+                    onMouseMove={e=>{if(!dragging&&tooltip)setTooltip(t=>t?{...t,x:e.clientX,y:e.clientY}:null)}}
+                    onMouseLeave={()=>{if(!dragging)setTooltip(null)}}>
+                    {/* Subtaak voortgang overlay */}
+                    {subPct!==null&&subPct>0&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:`${subPct}%`,background:'rgba(255,255,255,0.22)',borderRadius:'3px 0 0 3px',pointerEvents:'none'}}/>}
+                    {/* Label */}
+                    <span style={{fontSize:'0.52rem',color:'#fff',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',padding:'0 4px',position:'relative',zIndex:1,flex:1,lineHeight:1}}>
+                      {task.title.slice(0,20)}{task.title.length>20?'…':''}
+                    </span>
+                    {/* Resize handle rechts */}
+                    <div
+                      onMouseDown={e=>{e.stopPropagation();handleBarMouseDown(e,task,'resize')}}
+                      style={{width:'8px',height:'100%',cursor:'ew-resize',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'0 3px 3px 0',background:'rgba(0,0,0,0.15)',position:'relative',zIndex:3}}
+                      title="Sleep om deadline aan te passen">
+                      <span style={{color:'rgba(255,255,255,0.7)',fontSize:'0.5rem',lineHeight:1}}>⠿</span>
+                    </div>
                   </div>
                 )
               })}
-              {laneTasks.length===0&&(
-                <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',paddingLeft:'8px'}}>
-                  <span style={{fontSize:'0.65rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Geen geplande taken</span>
-                </div>
-              )}
+              {laneTasks.length===0&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',paddingLeft:'8px'}}><span style={{fontSize:'0.63rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Geen geplande taken</span></div>}
             </div>
           </div>
         )
       })}
 
-      {draggedId&&(
-        <div style={{padding:'0.35rem 0.75rem',fontSize:'0.67rem',color:'#2563EB',background:'#EFF6FF',borderTop:'1px solid #BFDBFE',fontWeight:500}}>
-          Sleep naar een dag om te plannen
-        </div>
-      )}
+      {draggedId&&!dragging&&<div style={{padding:'0.35rem 0.75rem',fontSize:'0.67rem',color:'#2563EB',background:'#EFF6FF',borderTop:'1px solid #BFDBFE',fontWeight:500}}>Sleep naar een dag om te plannen</div>}
 
       {/* Tooltip */}
-      {tooltip&&(
-        <div style={{position:'fixed',left:tooltip.x+12,top:tooltip.y-28,background:'rgba(28,25,23,0.88)',color:'#fff',fontSize:'0.7rem',padding:'0.25rem 0.5rem',borderRadius:'5px',pointerEvents:'none',zIndex:9999,whiteSpace:'nowrap',fontWeight:500,backdropFilter:'blur(4px)'}}>
-          {tooltip.title}
-        </div>
-      )}
+      {tooltip&&<div style={{position:'fixed',left:tooltip.x+12,top:tooltip.y-30,background:'rgba(28,25,23,0.9)',color:'#fff',fontSize:'0.7rem',padding:'0.25rem 0.55rem',borderRadius:'5px',pointerEvents:'none',zIndex:9999,whiteSpace:'nowrap',fontWeight:500}}>{tooltip.title}</div>}
     </div>
   )
 }
@@ -493,6 +554,10 @@ export default function Tasks({ user }) {
   const archiveTask=async id=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()});reload()}}
   const assignDay=async(id,date)=>{const t=tasks.find(x=>x.id===id);if(!t)return;const ns=t.status==='todo'?'gepland':t.status;await api.save('tasks',{...t,plannedDate:date,status:ns,completed:ns==='klaar'});setDraggedId(null);reload()}
   const assignToday=async id=>assignDay(id,todayISO())
+  const updateTaskDates=async(task,newStart,newEnd)=>{
+    await api.save('tasks',{...task,plannedDate:newStart,dueDate:newEnd,status:task.status==='todo'?'gepland':task.status})
+    reload()
+  }
   const clearDay=async id=>{const t=tasks.find(x=>x.id===id);if(!t)return;await api.save('tasks',{...t,plannedDate:'',status:t.status==='gepland'?'todo':t.status});reload()}
   const toggleSubtaskOnCard=async(taskId,subId)=>{const t=tasks.find(x=>x.id===taskId);if(!t)return;const upd={...t,subtasks:(t.subtasks||[]).map(s=>s.id===subId?{...s,completed:!s.completed}:s)};if(upd.subtasks.length>0&&upd.subtasks.every(s=>s.completed)){upd.status='klaar';upd.completed=true};await api.save('tasks',upd);reload()}
   const addTag=()=>{if(tagInput.trim()&&!form.tags.includes(tagInput.trim())){setForm({...form,tags:[...form.tags,tagInput.trim()]});setTagInput('')}}
@@ -519,7 +584,7 @@ export default function Tasks({ user }) {
       </div>
 
       <DagelijkseCheckins/>
-      <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit}/>
+      <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit} onTaskUpdate={updateTaskDates}/>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
         <div className="tabs" style={{marginBottom:0,borderBottom:'none'}}>{views.map(v=><button key={v.key} className={`tab ${view===v.key?'active':''}`} onClick={()=>setView(v.key)}>{v.label}</button>)}</div>
