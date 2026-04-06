@@ -263,6 +263,7 @@ function DagelijkseCheckinsCompact() {
       {items.length===0&&!showAdd&&(
         <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.25rem 0'}}>Voeg mensen toe die je dagelijks checkt</div>
       )}
+    </div>
   )
 }
 
