@@ -332,7 +332,7 @@ export default function Inventory() {
   const maxArt = Math.floor(minP / PER_ARTWORK)
   return (
     <>
-      <div className="page-header">
+      <div className="page-header" style={{alignItems:'flex-start'}}>
         <div>
           <h1>Voorraad</h1>
           <p className="page-subtitle">{items.length} items
@@ -340,6 +340,12 @@ export default function Inventory() {
             : <span style={{color:'#059669'}}> &middot; alles op voorraad</span>}
           </p>
         </div>
+        <BestellingTracker
+          shipments={shipments}
+          onAdd={()=>{setShipForm(emptyShipment);setEditShipment(null);setShowAddShipment(true)}}
+          onEdit={startEditShipment}
+          onDelete={id=>setConfirmDelShipment(id)}
+        />
       </div>
       <div style={{display:'flex',gap:'0.4rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>
         {SECTIONS.map(s => {
@@ -589,6 +595,174 @@ export default function Inventory() {
 }
 
 // ─── ZENDINGEN VIEW ─────────────────────────────────────────────────────────
+// ─── BESTELLING TRACKER ─────────────────────────────────────────────────────
+const STATUS_CONFIG = {
+  besteld:   { label: 'Besteld',    color: '#2563EB', bg: '#EFF6FF', icon: '📋' },
+  verzonden: { label: 'Verzonden',  color: '#7C3AED', bg: '#F5F3FF', icon: '📦' },
+  onderweg:  { label: 'Onderweg',   color: '#D97706', bg: '#FFF7ED', icon: '🚢' },
+  geleverd:  { label: 'Geleverd',   color: '#059669', bg: '#F0FDF4', icon: '✅' },
+  vertraagd: { label: 'Vertraagd',  color: '#DC2626', bg: '#FEF2F2', icon: '⚠️' },
+}
+
+function BestellingTracker({ shipments, onAdd, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState(null)
+  const ref = React.useRef(null)
+
+  // Sluit bij klik buiten
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setSelected(null) } }
+    if (open) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const active = shipments.filter(s => s.status !== 'geleverd')
+  const today = new Date().toISOString().slice(0,10)
+
+  const daysUntil = d => d ? Math.ceil((new Date(d) - new Date()) / (1000*60*60*24)) : null
+  const fmt = d => d ? new Date(d).toLocaleDateString('nl-NL', {day:'numeric', month:'short'}) : '—'
+
+  return (
+    <div ref={ref} style={{position:'relative'}}>
+      {/* Trigger knop */}
+      <button onClick={()=>{setOpen(!open);setSelected(null)}}
+        style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.45rem 0.85rem',borderRadius:'10px',border:'1px solid var(--border)',background:'var(--bg-card)',cursor:'pointer',transition:'all 0.15s',fontFamily:'var(--font-body)'}}>
+        <span style={{fontSize:'0.85rem'}}>🚢</span>
+        <span style={{fontSize:'0.82rem',fontWeight:600,color:'var(--text-primary)'}}>Bestellingen</span>
+        {active.length > 0 && (
+          <span style={{background:'#D97706',color:'#fff',borderRadius:'99px',padding:'0.05rem 0.45rem',fontSize:'0.65rem',fontWeight:700}}>{active.length}</span>
+        )}
+        <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{open?'▲':'▼'}</span>
+      </button>
+
+      {/* Dropdown */}
+      {open && !selected && (
+        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'14px',boxShadow:'0 8px 32px rgba(0,0,0,0.14)',padding:'0.75rem',minWidth:'340px',maxWidth:'400px',maxHeight:'480px',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.65rem'}}>
+            <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Bestellingen onderweg</span>
+            <button onClick={onAdd} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'6px',padding:'0.2rem 0.6rem',cursor:'pointer',fontSize:'0.7rem',fontWeight:600}}>+ Nieuwe</button>
+          </div>
+
+          {shipments.length === 0 && (
+            <div style={{textAlign:'center',padding:'1.5rem 0',color:'var(--text-secondary)',fontSize:'0.8rem',fontStyle:'italic'}}>
+              Geen bestellingen — klik "+ Nieuwe" om te beginnen
+            </div>
+          )}
+
+          <div style={{display:'flex',flexDirection:'column',gap:'0.35rem'}}>
+            {shipments.sort((a,b)=>a.status==='geleverd'?1:b.status==='geleverd'?-1:0).map(s => {
+              const cfg = STATUS_CONFIG[s.status] || STATUS_CONFIG.besteld
+              const d = daysUntil(s.expectedDate)
+              const isLate = s.status !== 'geleverd' && s.expectedDate && s.expectedDate < today
+              return (
+                <div key={s.id} onClick={()=>setSelected(s)}
+                  style={{padding:'0.55rem 0.7rem',borderRadius:'10px',border:`1px solid ${isLate?'#FCA5A5':cfg.color+'40'}`,background:isLate?'#FEF2F2':cfg.bg,cursor:'pointer',transition:'all 0.15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+                  onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                    <span style={{fontSize:'1rem',flexShrink:0}}>{cfg.icon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:'0.83rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.description}</div>
+                      <div style={{fontSize:'0.68rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{s.supplier}{s.quantity?` · ${s.quantity} ${s.unit||'stuks'}`:''}</div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'0.1rem',flexShrink:0}}>
+                      <span style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem',borderRadius:'99px',background:cfg.color,color:'#fff',fontWeight:600,whiteSpace:'nowrap'}}>{cfg.label}</span>
+                      {s.expectedDate && (
+                        <span style={{fontSize:'0.62rem',color:isLate?'#DC2626':d!==null&&d<=3?'#D97706':'var(--text-secondary)',fontWeight:isLate||d<=3?600:400}}>
+                          {isLate ? `${Math.abs(d)}d te laat` : d===0 ? 'Vandaag!' : d!==null ? `over ${d}d` : ''} · {fmt(s.expectedDate)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Progress bar status */}
+                  <div style={{marginTop:'0.4rem',display:'flex',gap:'2px'}}>
+                    {['besteld','verzonden','onderweg','geleverd'].map((st,i) => {
+                      const steps = ['besteld','verzonden','onderweg','geleverd']
+                      const cur = steps.indexOf(s.status)
+                      const filled = i <= cur
+                      return <div key={st} style={{flex:1,height:'3px',borderRadius:'99px',background:filled?cfg.color:'rgba(0,0,0,0.1)',transition:'background 0.3s'}}/>
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Detail popup */}
+      {open && selected && (
+        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'14px',boxShadow:'0 8px 32px rgba(0,0,0,0.14)',padding:'1rem',minWidth:'340px',maxWidth:'420px'}}>
+          {/* Header */}
+          <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem',marginBottom:'0.75rem'}}>
+            <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.8rem',padding:0,flexShrink:0,marginTop:'0.1rem'}}>← Terug</button>
+            <div style={{flex:1}}/>
+            <button onClick={()=>{onEdit(selected);setOpen(false);setSelected(null)}} style={{background:'var(--bg-secondary)',border:'none',cursor:'pointer',color:'var(--text-primary)',fontSize:'0.7rem',padding:'0.2rem 0.5rem',borderRadius:'5px',fontWeight:500}}>✎ Bewerken</button>
+            <button onClick={()=>{onDelete(selected.id);setSelected(null)}} style={{background:'none',border:'none',cursor:'pointer',color:'#DC2626',fontSize:'0.7rem',padding:'0.2rem 0.3rem'}}>✕</button>
+          </div>
+
+          <div style={{marginBottom:'0.75rem'}}>
+            <div style={{fontSize:'1rem',fontWeight:700,marginBottom:'0.15rem'}}>{selected.description}</div>
+            <div style={{fontSize:'0.75rem',color:'var(--text-secondary)'}}>{selected.supplier}{selected.quantity?` · ${selected.quantity} ${selected.unit||'stuks'}`:''}</div>
+          </div>
+
+          {/* Status voortgang */}
+          {(() => {
+            const cfg = STATUS_CONFIG[selected.status] || STATUS_CONFIG.besteld
+            const steps = ['besteld','verzonden','onderweg','geleverd']
+            const cur = steps.indexOf(selected.status)
+            return (
+              <div style={{marginBottom:'0.85rem'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:'0.35rem'}}>
+                  {steps.map((st,i) => {
+                    const scfg = STATUS_CONFIG[st]
+                    const done = i <= cur
+                    return (
+                      <div key={st} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'0.2rem',flex:1}}>
+                        <div style={{width:'24px',height:'24px',borderRadius:'50%',background:done?cfg.color:'var(--bg-secondary)',border:`2px solid ${done?cfg.color:'var(--border)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.65rem',transition:'all 0.3s'}}>
+                          {done && <span style={{color:'#fff',fontSize:'0.55rem'}}>✓</span>}
+                        </div>
+                        <div style={{fontSize:'0.55rem',color:done?cfg.color:'var(--text-secondary)',fontWeight:done?700:400,textAlign:'center'}}>{scfg.label}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Details grid */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.75rem'}}>
+            {[
+              ['Besteld op', selected.orderedDate],
+              ['Verzonden op', selected.shippedDate || '—'],
+              ['Verwacht', selected.expectedDate || '—'],
+              ['Bedrag', selected.amount ? `€${selected.amount}` : '—'],
+            ].map(([l,v]) => (
+              <div key={l} style={{background:'var(--bg-secondary)',borderRadius:'8px',padding:'0.4rem 0.55rem'}}>
+                <div style={{fontSize:'0.6rem',color:'var(--text-secondary)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</div>
+                <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--text-primary)',marginTop:'0.1rem'}}>{v && v.match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(v).toLocaleDateString('nl-NL',{day:'numeric',month:'long'}) : v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tracking + notities */}
+          {selected.trackingUrl && (
+            <a href={selected.trackingUrl} target="_blank" rel="noreferrer"
+              style={{display:'block',padding:'0.4rem 0.65rem',borderRadius:'8px',background:'#EFF6FF',color:'#2563EB',fontSize:'0.78rem',fontWeight:600,textDecoration:'none',marginBottom:'0.5rem',textAlign:'center'}}>
+              🔍 Track & Trace →
+            </a>
+          )}
+          {selected.notes && (
+            <div style={{padding:'0.4rem 0.55rem',borderRadius:'8px',background:'var(--bg-secondary)',fontSize:'0.75rem',color:'var(--text-secondary)',fontStyle:'italic'}}>{selected.notes}</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 function ZendingenView({ shipments, onAdd, onEdit, onDelete, expanded, setExpanded }) {
   const active = shipments.filter(s => s.status !== 'geleverd').sort((a,b) => (a.expectedDate||'').localeCompare(b.expectedDate||''))
   const delivered = shipments.filter(s => s.status === 'geleverd').sort((a,b) => (b.expectedDate||'').localeCompare(a.expectedDate||''))
