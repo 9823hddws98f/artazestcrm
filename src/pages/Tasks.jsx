@@ -561,7 +561,22 @@ export default function Tasks({ user }) {
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
   const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||''});setEditing(t.id);setShowAdd(true)}
   const updateStatus=async(id,status)=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,status,completed:status==='klaar'});reload()}}
-  const archiveTask=async id=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()});reload()}}
+  const archiveTask=async id=>{
+    const t=tasks.find(x=>x.id===id);if(!t)return
+    await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()})
+    reload()
+    if(undoToast?.timer)clearTimeout(undoToast.timer)
+    const timer=setTimeout(()=>setUndoToast(null),6000)
+    setUndoToast({id,title:t.title,timer})
+  }
+  const undoArchive=async()=>{
+    if(!undoToast)return
+    clearTimeout(undoToast.timer)
+    const all=await api.getAll('tasks')
+    const t=all.find(x=>x.id===undoToast.id)
+    if(t)await api.save('tasks',{...t,archived:false,archivedAt:null})
+    setUndoToast(null);reload()
+  }
   const assignDay=async(id,date)=>{const t=tasks.find(x=>x.id===id);if(!t)return;const ns=t.status==='todo'?'gepland':t.status;await api.save('tasks',{...t,plannedDate:date,status:ns,completed:ns==='klaar'});setDraggedId(null);reload()}
   const assignToday=async id=>assignDay(id,todayISO())
   const updateTaskDates=async(task,newStart,newEnd)=>{
@@ -585,7 +600,7 @@ export default function Tasks({ user }) {
   return (
     <>
       <div className="page-header">
-        <div><h1>Taken</h1>
+        <div><h1>Todo</h1>
           <p className="page-subtitle">{counts.todo} to do &middot; {counts.gepland} gepland &middot; {counts.bezig} bezig &middot; {counts.klaar} klaar
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
@@ -612,10 +627,11 @@ export default function Tasks({ user }) {
       </div>)}
 
       <div style={{display:'flex',gap:'1.25rem',alignItems:'flex-start'}}>
-        <div style={{flex:1,minWidth:0}}>
+        <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId} onDragStart={id=>setDraggedId(id)} onDragEnd={()=>setDraggedId(null)} onClearDay={clearDay}/>
+        <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={ns=>draggedId&&updateStatus(draggedId,ns)} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>archiveTask(id)} draggedId={draggedId}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={ns=>draggedId&&updateStatus(draggedId,ns)} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId}/>))}
             </div>
           ):view==='archief'?(
             archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 const allNavItems = [
   { path: '/', label: 'Dashboard', icon: '◉' },
-  { path: '/tasks', label: 'Taken', icon: '☐' },
+  { path: '/tasks', label: 'Todo', icon: '☐' },
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
   { path: '/content', label: 'Content', icon: '▶' },
   { path: '/catalog', label: 'Catalogus', icon: '▣' },
