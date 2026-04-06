@@ -1238,11 +1238,15 @@ export default function Tasks({ user }) {
           Alle
         </button>
         {/* Project knopjes */}
-        {projects.map(p=>{
+        {projects.map((p,pi)=>{
           const count=active.filter(t=>t.category===p&&t.status!=='klaar').length
           const isActive=activeProject===p
           return (
-            <div key={p} style={{position:'relative',display:'flex',alignItems:'center'}}>
+            <div key={p} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',pi.toString());e.dataTransfer.effectAllowed='move'}}
+              onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderLeft='2px solid var(--accent)'}}
+              onDragLeave={e=>{e.currentTarget.style.borderLeft='none'}}
+              onDrop={e=>{e.preventDefault();e.currentTarget.style.borderLeft='none';const from=parseInt(e.dataTransfer.getData('text/plain'));if(isNaN(from)||from===pi)return;const np=[...projects];const[moved]=np.splice(from,1);np.splice(pi,0,moved);saveProjects(np)}}
+              style={{position:'relative',display:'flex',alignItems:'center',cursor:'grab'}}>
               <button onClick={()=>setActiveProject(isActive?'alle':p)}
                 style={{padding:'0.22rem 0.7rem',borderRadius:'99px',border:`1.5px solid ${isActive?'var(--accent)':'var(--border)'}`,background:isActive?'var(--accent)':'var(--bg-secondary)',color:isActive?'#fff':'var(--text-primary)',fontSize:'0.75rem',fontWeight:600,cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:'0.3rem',whiteSpace:'nowrap'}}>
                 {p}
