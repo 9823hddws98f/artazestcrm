@@ -44,7 +44,6 @@ function WekelijkseTodos() {
       const saved = JSON.parse(localStorage.getItem('artazest_weekly_todos') || '[]')
       const savedWeek = localStorage.getItem('artazest_weekly_key')
       const curWeek = weekKey()
-      // Reset done-status elke nieuwe week, maar behoud de lijst
       if (savedWeek !== curWeek && saved.length > 0) {
         const reset = saved.map(i => ({...i, done: false}))
         localStorage.setItem('artazest_weekly_key', curWeek)
@@ -55,15 +54,41 @@ function WekelijkseTodos() {
       return saved.length > 0 ? saved : DEFAULT_WEEKLY
     } catch { return DEFAULT_WEEKLY }
   }
-  const save = items => localStorage.setItem('artazest_weekly_todos', JSON.stringify(items))
+  const save = items => {
+    localStorage.setItem('artazest_weekly_todos', JSON.stringify(items))
+    api.saveSetting('weekly_todos', items)
+    api.saveSetting('weekly_key', weekKey())
+  }
 
   const [items, setItems] = useState(loadItems)
   const [showPanel, setShowPanel] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [editId, setEditId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
+  useEffect(()=>{
+    Promise.all([api.getSetting('weekly_todos'),api.getSetting('weekly_key')]).then(([todos,wk])=>{
+      if(todos&&todos.length>0){
+        const curWeek=weekKey()
+        if(wk!==curWeek){const reset=todos.map(i=>({...i,done:false}));setItems(reset);save(reset)}
+        else setItems(todos)
+      }
+    })
+  },[])
 
   const doneCount = items.filter(i => i.done).length
+
+  useEffect(() => {
+    api.getSetting('weekly_todos').then(val => {
+      if (val && val.length > 0) {
+        const curWeek = weekKey()
+        api.getSetting('weekly_key').then(wk => {
+          if (wk !== curWeek) { const reset = val.map(i=>({...i,done:false})); setItems(reset); save(reset) }
+          else setItems(val)
+        })
+      }
+    })
+  }, [])
+
   const uid = () => `w${Date.now()}`
 
   const toggle = id => { const u = items.map(i => i.id===id?{...i,done:!i.done}:i); save(u); setItems(u) }
@@ -131,8 +156,10 @@ function WekelijkseTodos() {
 function DagelijkseCheckinsCompact() {
   const today = new Date().toISOString().slice(0,10)
   const load = () => { try { return JSON.parse(localStorage.getItem('artazest_checkins') || '[]') } catch { return [] } }
-  const save = items => localStorage.setItem('artazest_checkins', JSON.stringify(items))
+  const save = items => { localStorage.setItem('artazest_checkins', JSON.stringify(items)); api.saveSetting('checkins', items) }
   const [items, setItems] = useState(load)
+
+  useEffect(() => { api.getSetting('checkins').then(val => { if (val && val.length > 0) setItems(val) }) }, [])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
   const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
@@ -273,9 +300,10 @@ function DagelijkseCheckinsCompact() {
 function DagelijkseCheckins() {
   const today = new Date().toISOString().slice(0,10)
   const load = () => JSON.parse(localStorage.getItem('artazest_checkins') || '[]')
-  const save = items => localStorage.setItem('artazest_checkins', JSON.stringify(items))
+  const save = items => { localStorage.setItem('artazest_checkins', JSON.stringify(items)); api.saveSetting('checkins', items) }
 
   const [items, setItems] = useState(load)
+  useEffect(() => { api.getSetting('checkins').then(val => { if (val && val.length > 0) setItems(val) }) }, [])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
 
@@ -1046,8 +1074,12 @@ export default function Tasks({ user }) {
   const [newProject,setNewProject]=useState('')
   const [confirmDeleteProject,setConfirmDeleteProject]=useState(null) // naam van project
 
-  const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st))}
-  const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps))}
+  const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st));api.saveSetting('statuses',st)}
+  const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps));api.saveSetting('projects',ps)}
+  useEffect(()=>{
+    api.getSetting('statuses').then(val=>{if(val&&val.length>0)setStatuses(val)})
+    api.getSetting('projects').then(val=>{if(val&&val.length>0)setProjects(val)})
+  },[])
   const addProject=()=>{
     if(!newProject.trim()) return
     const exists=projects.find(p=>p.toLowerCase()===newProject.trim().toLowerCase())

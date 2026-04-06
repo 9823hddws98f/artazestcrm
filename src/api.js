@@ -37,6 +37,21 @@ export const api = {
     if (data) return this.save(store, { ...data, [field]: !data[field] })
   },
 
+  // ── Settings key/value helpers ──
+  async getSetting(key) {
+    const { data, error } = await supabase.from('settings').select('*').eq('key', key).single()
+    if (error || !data) {
+      try { const ls = localStorage.getItem(`artazest_${key}`); return ls ? JSON.parse(ls) : null } catch { return null }
+    }
+    return data.value
+  },
+
+  async saveSetting(key, value) {
+    localStorage.setItem(`artazest_${key}`, JSON.stringify(value))
+    const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' })
+    if (error) console.warn(`saveSetting(${key}):`, error.message)
+  },
+
   // Seed Supabase als tabellen leeg zijn
   async seedIfEmpty(store, items) {
     const { count } = await supabase.from(store).select('*', { count: 'exact', head: true })
