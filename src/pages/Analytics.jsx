@@ -22,6 +22,11 @@ export default function Analytics() {
   const [budgets, setBudgets] = useState([])
   const [cfg, setCfg] = useState({ cashOnHand: 15000, monthlyFixed: 2500 })
   const [showModal, setShowModal] = useState(false)
+  const [liveMetrics, setLiveMetrics] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('artazest_live_metrics')) || { shopifyRevenue: 0, metaAdSpend: 0, cogs: 0 } }
+    catch { return { shopifyRevenue: 0, metaAdSpend: 0, cogs: 0 } }
+  })
+  const saveLiveMetrics = m => { setLiveMetrics(m); localStorage.setItem('artazest_live_metrics', JSON.stringify(m)) }
   const [editItem, setEditItem] = useState(null)
   useEffect(() => {
     api.getAll('investments').then(setInvestments)
@@ -56,7 +61,7 @@ export default function Analytics() {
       </div>      <div className="tabs">
         {tabs.map(t => <button key={t.key} className={`tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>
-      {tab === 'overzicht' && <OverviewTab {...{ totalInv, burnRate, runway, cfg, saveCfg, byCategory, maxCat, investments }} />}
+      {tab === 'overzicht' && <OverviewTab {...{ totalInv, burnRate, runway, cfg, saveCfg, byCategory, maxCat, investments, liveMetrics, saveLiveMetrics }} />}
       {tab === 'investeringen' && <InvestmentsTab {...{ investments, setInvestments, budgets, setBudgets, showModal, setShowModal, editItem, setEditItem }} />}
       {tab === 'breakeven' && <BreakevenTab cfg={cfg} />}
       {tab === 'cashflow' && <CashflowTab {...{ cfg, saveCfg, totalInv }} />}
@@ -65,10 +70,71 @@ export default function Analytics() {
 }
 
 /* ========== OVERVIEW ========== */
-function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, maxCat, investments }) {
+function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, maxCat, investments, liveMetrics, saveLiveMetrics }) {
   const recent = [...investments].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 6)
+  const { shopifyRevenue, metaAdSpend, cogs } = liveMetrics
+  const grossProfit = shopifyRevenue - cogs - metaAdSpend
+  const margin = shopifyRevenue > 0 ? (grossProfit / shopifyRevenue * 100) : 0
+  const marginTarget = 8
+  const marginOk = margin >= marginTarget
+  const upd = (k, v) => saveLiveMetrics({ ...liveMetrics, [k]: parseFloat(v) || 0 })
+
   return (
     <>
+      {/* LIVE METRICS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', marginBottom: '1.5rem' }}>
+        {/* Shopify Omzet */}
+        <div className="metric-card" style={{ borderTop: '3px solid #059669' }}>
+          <div className="metric-label">Shopify omzet</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0.35rem 0' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>€</span>
+            <input type="number" value={shopifyRevenue} onChange={e => upd('shopifyRevenue', e.target.value)}
+              style={{ width: '100%', fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, border: 'none', background: 'transparent', color: '#059669', outline: 'none', padding: 0 }} />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>klik om in te vullen</div>
+        </div>
+
+        {/* Meta Ads */}
+        <div className="metric-card" style={{ borderTop: '3px solid #DC2626' }}>
+          <div className="metric-label">Meta Ads kosten</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0.35rem 0' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>€</span>
+            <input type="number" value={metaAdSpend} onChange={e => upd('metaAdSpend', e.target.value)}
+              style={{ width: '100%', fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, border: 'none', background: 'transparent', color: '#DC2626', outline: 'none', padding: 0 }} />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>klik om in te vullen</div>
+        </div>
+
+        {/* COGS */}
+        <div className="metric-card" style={{ borderTop: '3px solid #D97706' }}>
+          <div className="metric-label">Inkoopkosten (COGS)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0.35rem 0' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>€</span>
+            <input type="number" value={cogs} onChange={e => upd('cogs', e.target.value)}
+              style={{ width: '100%', fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, border: 'none', background: 'transparent', color: '#D97706', outline: 'none', padding: 0 }} />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>klik om in te vullen</div>
+        </div>
+
+        {/* Winst + marge */}
+        <div className="metric-card" style={{ borderTop: `3px solid ${marginOk ? '#059669' : '#DC2626'}`, background: marginOk ? '#F0FDF4' : grossProfit < 0 ? '#FEF2F2' : 'var(--bg-card)' }}>
+          <div className="metric-label">Brutomarge</div>
+          <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: marginOk ? '#059669' : '#DC2626', margin: '0.35rem 0' }}>
+            {fmtD(grossProfit)}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: marginOk ? '#059669' : '#DC2626' }}>{margin.toFixed(1)}%</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>doel: {marginTarget}%</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: marginOk ? '#059669' : '#DC2626' }}>{marginOk ? '✓' : `${(marginTarget - margin).toFixed(1)}% tekort`}</span>
+          </div>
+          {shopifyRevenue > 0 && (
+            <div style={{ marginTop: '0.4rem', height: '4px', background: 'rgba(0,0,0,0.06)', borderRadius: '99px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, margin / marginTarget * 100))}%`, background: marginOk ? '#059669' : '#DC2626', borderRadius: '99px' }} />
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="metric-grid">
         <div className="metric-card">
           <div className="metric-label">Totaal geïnvesteerd</div>
