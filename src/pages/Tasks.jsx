@@ -1035,8 +1035,26 @@ export default function Tasks({ user }) {
   })
   const [showPhaseEdit,setShowPhaseEdit]=useState(false)
   const [newPhase,setNewPhase]=useState('')
+  const [activeProject,setActiveProject]=useState('alle')
+  const [projects,setProjects]=useState(()=>{
+    try { return JSON.parse(localStorage.getItem('artazest_projects') || '[]') }
+    catch { return [] }
+  })
+  const [showAddProject,setShowAddProject]=useState(false)
+  const [newProject,setNewProject]=useState('')
 
   const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st))}
+  const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps))}
+  const addProject=()=>{
+    if(!newProject.trim()) return
+    const exists=projects.find(p=>p.toLowerCase()===newProject.trim().toLowerCase())
+    if(!exists) saveProjects([...projects,newProject.trim()])
+    setActiveProject(newProject.trim()); setNewProject(''); setShowAddProject(false)
+  }
+  const removeProject=name=>{
+    saveProjects(projects.filter(p=>p!==name))
+    if(activeProject===name) setActiveProject('alle')
+  }
   const addPhase=()=>{if(!newPhase.trim())return;const key=newPhase.trim().toLowerCase().replace(/\s+/g,'-');if(statuses.find(s=>s.key===key))return;const used=statuses.map(s=>s.color);const color=COLORS.find(c=>!used.includes(c))||COLORS[0];saveStatuses([...statuses,{key,label:newPhase.trim(),color}]);setNewPhase('')}
   const removePhase=key=>{
     if(statuses.length<=2)return
@@ -1109,7 +1127,7 @@ export default function Tasks({ user }) {
   const removeSubtask=subId=>setForm({...form,subtasks:form.subtasks.filter(s=>s.id!==subId)})
 
   const active=tasks.filter(t=>!t.archived)
-  const filtered=active.filter(t=>filterUser==='all'||t.assignee===filterUser).sort((a,b)=>{const p={high:0,normal:1};if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1);if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1;if(a.dueDate&&!b.dueDate)return -1;if(!a.dueDate&&b.dueDate)return 1;return 0})
+  const filtered=active.filter(t=>(filterUser==='all'||t.assignee===filterUser)&&(activeProject==='alle'||t.category===activeProject)).sort((a,b)=>{const p={high:0,normal:1};if((p[a.priority]||1)!==(p[b.priority]||1))return(p[a.priority]||1)-(p[b.priority]||1);if(a.dueDate&&b.dueDate)return a.dueDate<b.dueDate?-1:1;if(a.dueDate&&!b.dueDate)return -1;if(!a.dueDate&&b.dueDate)return 1;return 0})
   const archived=tasks.filter(t=>t.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0))
   const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig'||t.status==='in-uitvoering').length,klaar:filtered.filter(t=>t.status==='klaar').length}
   const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'kalender',label:'Kalender'},{key:'archief',label:`Archief (${archived.length})`}]
@@ -1140,6 +1158,52 @@ export default function Tasks({ user }) {
           {ASSIGNEES.map(a=><button key={a} className={`btn btn-sm ${filterUser===a?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser(a)}>{a}</button>)}
           <button className="btn btn-sm btn-outline" onClick={()=>setShowPhaseEdit(!showPhaseEdit)} style={{marginLeft:'0.25rem',fontSize:'0.75rem',color:'var(--text-secondary)'}}>⚙</button>
         </div>
+      </div>
+
+      {/* PROJECT FILTER BALK */}
+      <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.85rem',paddingBottom:'0.75rem',borderBottom:'1px solid var(--border)'}}>
+        <span style={{fontSize:'0.6rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',marginRight:'0.15rem',whiteSpace:'nowrap'}}>Project</span>
+        {/* Alle knop */}
+        <button onClick={()=>setActiveProject('alle')}
+          style={{padding:'0.22rem 0.7rem',borderRadius:'99px',border:`1.5px solid ${activeProject==='alle'?'var(--accent)':'var(--border)'}`,background:activeProject==='alle'?'var(--accent)':'transparent',color:activeProject==='alle'?'#fff':'var(--text-secondary)',fontSize:'0.75rem',fontWeight:600,cursor:'pointer',transition:'all 0.15s',whiteSpace:'nowrap'}}>
+          Alle
+        </button>
+        {/* Project knopjes */}
+        {projects.map(p=>{
+          const count=active.filter(t=>t.category===p&&t.status!=='klaar').length
+          const isActive=activeProject===p
+          return (
+            <div key={p} style={{position:'relative',display:'flex',alignItems:'center'}}>
+              <button onClick={()=>setActiveProject(isActive?'alle':p)}
+                style={{padding:'0.22rem 0.7rem',borderRadius:'99px',border:`1.5px solid ${isActive?'var(--accent)':'var(--border)'}`,background:isActive?'var(--accent)':'var(--bg-secondary)',color:isActive?'#fff':'var(--text-primary)',fontSize:'0.75rem',fontWeight:600,cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:'0.3rem',whiteSpace:'nowrap'}}>
+                {p}
+                {count>0&&<span style={{fontSize:'0.65rem',background:isActive?'rgba(255,255,255,0.25)':'var(--bg-card)',color:isActive?'#fff':'var(--text-secondary)',borderRadius:'99px',padding:'0 0.3rem',fontWeight:700}}>{count}</span>}
+              </button>
+              <button onClick={e=>{e.stopPropagation();removeProject(p)}} title="Verwijder project"
+                style={{position:'absolute',top:'-5px',right:'-5px',width:'15px',height:'15px',borderRadius:'50%',background:'#DC2626',color:'#fff',border:'2px solid white',cursor:'pointer',fontSize:'0.6rem',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1,padding:0,opacity:0,transition:'opacity 0.15s'}}
+                ref={el=>{if(el){el.closest('div').addEventListener('mouseenter',()=>el.style.opacity='1');el.closest('div').addEventListener('mouseleave',()=>el.style.opacity='0')}}}>×</button>
+            </div>
+          )
+        })}
+        {/* Toevoeg */}
+        {!showAddProject ? (
+          <button onClick={()=>setShowAddProject(true)}
+            style={{padding:'0.22rem 0.6rem',borderRadius:'99px',border:'1.5px dashed var(--border)',background:'transparent',color:'var(--text-secondary)',fontSize:'0.73rem',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.2rem'}}>
+            + Project
+          </button>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.15rem 0.4rem',borderRadius:'99px',border:'1.5px solid var(--accent)',background:'var(--accent-light)'}}>
+            <input autoFocus value={newProject} onChange={e=>setNewProject(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter')addProject();if(e.key==='Escape')setShowAddProject(false)}}
+              placeholder="Projectnaam..." list="cat-suggestions"
+              style={{border:'none',background:'transparent',fontSize:'0.75rem',fontWeight:600,outline:'none',width:'110px',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
+            <datalist id="cat-suggestions">
+              {CATEGORIES.map(cat=><option key={cat} value={cat}/>)}
+            </datalist>
+            <button onClick={addProject} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'99px',fontSize:'0.65rem',padding:'0.15rem 0.4rem',cursor:'pointer',fontWeight:600}}>+</button>
+            <button onClick={()=>setShowAddProject(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem'}}>✕</button>
+          </div>
+        )}
       </div>
 
       {showPhaseEdit&&(<div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem'}}>
