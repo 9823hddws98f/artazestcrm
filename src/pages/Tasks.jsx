@@ -470,6 +470,14 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
           {subPct!==null&&<span style={{fontSize:'0.58rem',color:subPct===100?'#059669':'var(--text-secondary)',marginLeft:'auto',flexShrink:0}}>{subDone}/{subs.length}</span>}
         </div>
         {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
+        {showArchiveBtn&&onArchive&&(
+          <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem'}} onClick={e=>e.stopPropagation()}>
+            <button onClick={onArchive} title="Archiveer" style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.62rem',color:'var(--text-secondary)',padding:'0.1rem 0.2rem',lineHeight:1,borderRadius:'4px'}}
+              onMouseEnter={e=>e.currentTarget.style.color='#D97706'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>
+              📦 archiveer
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -528,6 +536,8 @@ export default function Tasks({ user }) {
   const [editing,setEditing]=useState(null)
   const [confirmDel,setConfirmDel]=useState(null)
   const [draggedId,setDraggedId]=useState(null)
+  const [undoToast,setUndoToast]=useState(null) // {id, title, timer}
+  const [confirmArchive,setConfirmArchive]=useState(null) // {id, title}
   const [form,setForm]=useState({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[]})
   const [tagInput,setTagInput]=useState('')
   const [subtaskInput,setSubtaskInput]=useState('')
@@ -612,11 +622,34 @@ export default function Tasks({ user }) {
             <div className="task-list">{archived.map(t=>(<div key={t.id} className="task-item" style={{opacity:0.6}}><div style={{flex:1}}><div className="task-title" style={{textDecoration:'line-through'}}>{t.title}</div><div className="task-meta">{t.assignee} &middot; {t.archivedAt&&fmt(t.archivedAt)}</div></div><button className="btn btn-sm btn-outline" onClick={async()=>{const x=tasks.find(a=>a.id===t.id);if(x){await api.save('tasks',{...x,archived:false});reload()}}} style={{fontSize:'0.7rem'}}>Terugzetten</button></div>))}</div>
           ):(
             filtered.length===0?<div className="card"><div className="empty-state">Geen taken{filterUser!=='all'?` voor ${filterUser}`:''}</div></div>:
-            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>{filtered.map(t=><TaskCard key={t.id} task={t} statuses={statuses} draggable onDragStart={()=>setDraggedId(t.id)} onDragEnd={()=>setDraggedId(null)} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onSubtaskToggle={subId=>toggleSubtaskOnCard(t.id,subId)} onArchive={()=>archiveTask(t.id)}/>)}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>{filtered.map(t=><TaskCard key={t.id} task={t} statuses={statuses} draggable onDragStart={()=>setDraggedId(t.id)} onDragEnd={()=>setDraggedId(null)} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onSubtaskToggle={subId=>toggleSubtaskOnCard(t.id,subId)} onArchive={()=>setConfirmArchive({id:t.id,title:t.title})}/>)}</div>
           )}
         </div>
-        <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId} onDragStart={id=>setDraggedId(id)} onDragEnd={()=>setDraggedId(null)} onClearDay={clearDay}/>
       </div>
+
+      {/* Archiveer bevestiging */}
+      {confirmArchive&&(
+        <div className="modal-overlay" onClick={()=>setConfirmArchive(null)}>
+          <div className="modal" style={{maxWidth:'400px',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:'1.5rem',marginBottom:'0.5rem'}}>📦</div>
+            <h3 style={{marginBottom:'0.5rem'}}>Naar archief?</h3>
+            <p style={{fontSize:'0.82rem',color:'var(--text-secondary)',marginBottom:'1.25rem'}}>"{confirmArchive.title}" wordt gearchiveerd. Je kunt dit ongedaan maken.</p>
+            <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
+              <button className="btn btn-outline" onClick={()=>setConfirmArchive(null)}>Annuleren</button>
+              <button className="btn btn-primary" onClick={()=>{archiveTask(confirmArchive.id);setConfirmArchive(null)}}>Archiveer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Undo toast */}
+      {undoToast&&(
+        <div style={{position:'fixed',bottom:'1.5rem',left:'50%',transform:'translateX(-50%)',background:'rgba(28,25,23,0.92)',color:'#fff',padding:'0.65rem 1rem',borderRadius:'10px',display:'flex',alignItems:'center',gap:'0.75rem',zIndex:9999,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',backdropFilter:'blur(8px)',fontSize:'0.82rem',fontWeight:500,whiteSpace:'nowrap'}}>
+          <span>📦 "{undoToast.title.slice(0,30)}{undoToast.title.length>30?'…':''}" gearchiveerd</span>
+          <button onClick={undoArchive} style={{background:'#fff',color:'rgba(28,25,23,0.9)',border:'none',borderRadius:'6px',padding:'0.3rem 0.75rem',cursor:'pointer',fontWeight:700,fontSize:'0.78rem',fontFamily:'var(--font-body)'}}>Ongedaan</button>
+          <button onClick={()=>{clearTimeout(undoToast.timer);setUndoToast(null)}} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',cursor:'pointer',fontSize:'0.75rem',padding:'0.1rem'}}>✕</button>
+        </div>
+      )}
 
       {confirmDel&&(<div className="modal-overlay" onClick={()=>setConfirmDel(null)}><div className="modal" style={{maxWidth:'380px',textAlign:'center'}} onClick={e=>e.stopPropagation()}><h3 style={{marginBottom:'0.75rem'}}>Taak verwijderen?</h3><div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}><button className="btn btn-outline" onClick={()=>setConfirmDel(null)}>Annuleren</button><button className="btn btn-primary" style={{background:'var(--danger)'}} onClick={()=>del(confirmDel)}>Verwijderen</button></div></div></div>)}
 
