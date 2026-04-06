@@ -21,6 +21,108 @@ const fmt = d => new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'sh
 const todayISO = () => new Date().toISOString().slice(0,10)
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
 
+// ─── WEKELIJKSE TO-DO'S ─────────────────────────────────────────────────────
+const DEFAULT_WEEKLY = [
+  { id: 'w1', title: 'Content plannen voor volgende week', done: false },
+  { id: 'w2', title: 'Analytics & omzet bijwerken', done: false },
+  { id: 'w3', title: 'Voorraad controleren', done: false },
+  { id: 'w4', title: 'To-do's prioriteren', done: false },
+  { id: 'w5', title: 'Sam & Productie briefing', done: false },
+]
+
+function WekelijkseTodos() {
+  const weekKey = () => {
+    const d = new Date(); const jan1 = new Date(d.getFullYear(),0,1)
+    return `w${Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7)}-${d.getFullYear()}`
+  }
+  const loadItems = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('artazest_weekly_todos') || '[]')
+      const savedWeek = localStorage.getItem('artazest_weekly_key')
+      const curWeek = weekKey()
+      // Reset done-status elke nieuwe week, maar behoud de lijst
+      if (savedWeek !== curWeek && saved.length > 0) {
+        const reset = saved.map(i => ({...i, done: false}))
+        localStorage.setItem('artazest_weekly_key', curWeek)
+        localStorage.setItem('artazest_weekly_todos', JSON.stringify(reset))
+        return reset
+      }
+      if (!savedWeek) localStorage.setItem('artazest_weekly_key', curWeek)
+      return saved.length > 0 ? saved : DEFAULT_WEEKLY
+    } catch { return DEFAULT_WEEKLY }
+  }
+  const save = items => localStorage.setItem('artazest_weekly_todos', JSON.stringify(items))
+
+  const [items, setItems] = useState(loadItems)
+  const [showPanel, setShowPanel] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [editId, setEditId] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+
+  const doneCount = items.filter(i => i.done).length
+  const uid = () => `w${Date.now()}`
+
+  const toggle = id => { const u = items.map(i => i.id===id?{...i,done:!i.done}:i); save(u); setItems(u) }
+  const add = () => {
+    if (!newTitle.trim()) return
+    const u = [...items, {id: uid(), title: newTitle.trim(), done: false}]
+    save(u); setItems(u); setNewTitle('')
+  }
+  const remove = id => { const u = items.filter(i=>i.id!==id); save(u); setItems(u) }
+  const startEdit = (item) => { setEditId(item.id); setEditTitle(item.title) }
+  const saveEdit = () => {
+    if (!editTitle.trim()) return
+    const u = items.map(i => i.id===editId?{...i,title:editTitle.trim()}:i)
+    save(u); setItems(u); setEditId(null)
+  }
+
+  return (
+    <div style={{position:'relative'}}>
+      <button onClick={()=>setShowPanel(!showPanel)}
+        style={{display:'flex',alignItems:'center',gap:'0.35rem',padding:'0.35rem 0.75rem',borderRadius:'8px',border:'1px solid var(--border)',background:doneCount===items.length&&items.length>0?'#F0FDF4':'var(--bg-card)',cursor:'pointer',fontSize:'0.78rem',fontWeight:600,color:'var(--text-primary)',transition:'all 0.15s'}}>
+        <span>📋</span>
+        <span>Week</span>
+        <span style={{background:doneCount===items.length&&items.length>0?'#059669':'var(--bg-secondary)',color:doneCount===items.length&&items.length>0?'#fff':'var(--text-secondary)',borderRadius:'99px',padding:'0.05rem 0.4rem',fontSize:'0.65rem',fontWeight:700}}>{doneCount}/{items.length}</span>
+      </button>
+
+      {showPanel && (
+        <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'12px',boxShadow:'0 8px 24px rgba(0,0,0,0.12)',padding:'0.75rem',minWidth:'280px',maxHeight:'400px',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.6rem'}}>
+            <div>
+              <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Wekelijkse to-do&apos;s</span>
+              <div style={{fontSize:'0.62rem',color:'var(--text-secondary)',marginTop:'0.05rem'}}>Reset elke week automatisch</div>
+            </div>
+            <button onClick={()=>setShowPanel(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
+          </div>
+
+          <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',marginBottom:'0.5rem'}}>
+            {items.map(item => (
+              <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.4rem',padding:'0.4rem 0.5rem',borderRadius:'8px',border:`1px solid ${item.done?'#059669':'var(--border)'}`,background:item.done?'#F0FDF4':'var(--bg-secondary)'}}>
+                <input type="checkbox" checked={item.done} onChange={()=>toggle(item.id)} style={{width:'15px',height:'15px',cursor:'pointer',accentColor:'#059669',flexShrink:0}}/>
+                {editId===item.id ? (
+                  <input autoFocus value={editTitle} onChange={e=>setEditTitle(e.target.value)}
+                    onKeyDown={e=>{if(e.key==='Enter')saveEdit();if(e.key==='Escape')setEditId(null)}}
+                    onBlur={saveEdit}
+                    style={{flex:1,border:'none',background:'transparent',fontSize:'0.8rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
+                ) : (
+                  <span onClick={()=>startEdit(item)} style={{flex:1,fontSize:'0.8rem',fontWeight:500,color:item.done?'#059669':'var(--text-primary)',textDecoration:item.done?'line-through':'none',cursor:'text'}}>{item.title}</span>
+                )}
+                <button onClick={()=>remove(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.65rem',padding:'0.1rem',flexShrink:0}}
+                  onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:'flex',gap:'0.3rem'}}>
+            <input value={newTitle} onChange={e=>setNewTitle(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Nieuwe wekelijkse taak..." className="form-input" style={{flex:1,fontSize:'0.75rem',padding:'0.3rem 0.5rem'}}/>
+            <button onClick={add} className="btn btn-sm btn-outline" style={{fontSize:'0.72rem',flexShrink:0}}>+</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── DAGELIJKSE CHECK-INS (COMPACT — naast header) ──────────────────────────
 function DagelijkseCheckinsCompact() {
   const today = new Date().toISOString().slice(0,10)
@@ -42,38 +144,67 @@ function DagelijkseCheckinsCompact() {
     save(u); setItems(u); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
   }
 
+  const [showPanel, setShowPanel] = useState(false)
+
   return (
-    <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap'}}>
-      {/* Label + teller */}
-      <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',whiteSpace:'nowrap'}}>
-        Check-ins <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)'}}>{doneCount}/{items.length}</span>
-      </span>
-      {/* Pills */}
-      {items.map(item => {
-        const done = isChecked(item)
-        return (
-          <div key={item.id} onClick={()=>toggle(item.id)}
-            title={`${item.name}${item.topic?' — '+item.topic:''} (${item.via})`}
-            style={{display:'flex',alignItems:'center',gap:'0.25rem',padding:'0.18rem 0.5rem',borderRadius:'99px',border:`1.5px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',cursor:'pointer',fontSize:'0.7rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',transition:'all 0.15s',userSelect:'none',whiteSpace:'nowrap'}}>
-            <span style={{fontSize:'0.75rem'}}>{viaIcon[item.via]||'👤'}</span>
-            <span style={{textDecoration:done?'line-through':'none'}}>{item.name}</span>
-            {done&&<span style={{fontSize:'0.6rem'}}>✓</span>}
-            <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.6rem',padding:'0 0 0 0.1rem',lineHeight:1}}
-              onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+    <div style={{position:'relative'}}>
+      {/* Trigger knop */}
+      <button onClick={()=>setShowPanel(!showPanel)}
+        style={{display:'flex',alignItems:'center',gap:'0.35rem',padding:'0.35rem 0.75rem',borderRadius:'8px',border:'1px solid var(--border)',background:doneCount===items.length&&items.length>0?'#F0FDF4':'var(--bg-card)',cursor:'pointer',fontSize:'0.78rem',fontWeight:600,color:'var(--text-primary)',transition:'all 0.15s'}}>
+        <span>✓</span>
+        <span>Check-ins</span>
+        <span style={{background:doneCount===items.length&&items.length>0?'#059669':'var(--bg-secondary)',color:doneCount===items.length&&items.length>0?'#fff':'var(--text-secondary)',borderRadius:'99px',padding:'0.05rem 0.4rem',fontSize:'0.65rem',fontWeight:700}}>{doneCount}/{items.length}</span>
+      </button>
+
+      {/* Dropdown panel */}
+      {showPanel && (
+        <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,zIndex:999,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'12px',boxShadow:'0 8px 24px rgba(0,0,0,0.12)',padding:'0.75rem',minWidth:'240px',maxHeight:'340px',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.6rem'}}>
+            <span style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Dagelijkse check-ins</span>
+            <button onClick={()=>setShowPanel(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
           </div>
-        )
-      })}
-      {/* + knopje */}
-      {!showAdd ? (
-        <button onClick={()=>setShowAdd(true)} style={{padding:'0.18rem 0.5rem',borderRadius:'99px',border:'1.5px dashed var(--border)',background:'transparent',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',fontWeight:500}}>+ persoon</button>
-      ) : (
-        <div style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.2rem 0.5rem',borderRadius:'99px',border:'1.5px solid var(--accent)',background:'var(--accent-light)'}}>
-          <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam" style={{border:'none',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',width:'70px',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
-          <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.65rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
-            {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
-          </select>
-          <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'99px',fontSize:'0.65rem',padding:'0.15rem 0.4rem',cursor:'pointer'}}>+</button>
-          <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem'}}>✕</button>
+
+          {/* Verticale lijst */}
+          <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',marginBottom:'0.5rem'}}>
+            {items.map(item => {
+              const done = isChecked(item)
+              return (
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.4rem 0.5rem',borderRadius:'8px',border:`1px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-secondary)',cursor:'pointer',transition:'all 0.15s'}}
+                  onClick={()=>toggle(item.id)}>
+                  {/* Checkbox */}
+                  <div style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${done?'#059669':'var(--border-strong)'}`,background:done?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s'}}>
+                    {done&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
+                  </div>
+                  {/* Info */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'0.8rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',textDecoration:done?'line-through':'none'}}>{item.name}</div>
+                    <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{viaIcon[item.via]||'👤'} {item.via}{item.topic?` · ${item.topic}`:''}</div>
+                  </div>
+                  <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.7rem',padding:'0.1rem',flexShrink:0}}
+                    onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Toevoegen */}
+          {!showAdd ? (
+            <button onClick={()=>setShowAdd(true)} style={{width:'100%',padding:'0.35rem',borderRadius:'8px',border:'1.5px dashed var(--border)',background:'transparent',cursor:'pointer',fontSize:'0.75rem',color:'var(--text-secondary)',fontWeight:500,textAlign:'center'}}>+ Persoon toevoegen</button>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',padding:'0.5rem',borderRadius:'8px',border:'1px solid var(--accent)',background:'var(--accent-light)'}}>
+              <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam..." className="form-input" style={{fontSize:'0.78rem',padding:'0.3rem 0.5rem'}}/>
+              <div style={{display:'flex',gap:'0.3rem'}}>
+                <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} className="form-select" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem',flex:1}}>
+                  {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
+                </select>
+              </div>
+              <input value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Waarover... (optioneel)" className="form-input" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}/>
+              <div style={{display:'flex',gap:'0.3rem'}}>
+                <button onClick={add} className="btn btn-primary" style={{flex:1,fontSize:'0.72rem',padding:'0.3rem'}}>+ Toevoegen</button>
+                <button onClick={()=>setShowAdd(false)} className="btn btn-outline" style={{fontSize:'0.72rem',padding:'0.3rem 0.5rem'}}>✕</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -662,8 +793,9 @@ export default function Tasks({ user }) {
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
           <DagelijkseCheckinsCompact/>
+          <WekelijkseTodos/>
           <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
         </div>
       </div>
