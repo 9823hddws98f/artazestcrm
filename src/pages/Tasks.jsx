@@ -188,7 +188,7 @@ function DagelijkseCheckinsCompact() {
   }, [])
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:'0.3rem',minWidth:'260px',maxWidth:'320px'}}>
+    <div style={{minWidth:'220px',maxWidth:'600px'}}>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.1rem'}}>
         <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>
@@ -197,7 +197,15 @@ function DagelijkseCheckinsCompact() {
         <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+ persoon</button>
       </div>
 
-      {/* Personen verticaal — compact */}
+      {/* Personen — grid, max 4 per kolom */}
+      <div style={{
+        display:'grid',
+        gridTemplateRows:'repeat(4, auto)',
+        gridAutoFlow:'column',
+        gap:'0.25rem',
+        alignItems:'start',
+        marginBottom: showAdd ? '0.35rem' : 0
+      }}>
       {items.map(item => {
         const done = isChecked(item)
         return (
@@ -247,6 +255,8 @@ function DagelijkseCheckinsCompact() {
           </div>
         </div>
       )}
+
+      </div>
 
       {items.length===0&&!showAdd&&(
         <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.25rem 0'}}>Voeg mensen toe die je dagelijks checkt</div>
