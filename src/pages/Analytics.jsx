@@ -75,7 +75,7 @@ function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, max
   const { shopifyRevenue, metaAdSpend, cogs } = liveMetrics
   const grossProfit = shopifyRevenue - cogs - metaAdSpend
   const margin = shopifyRevenue > 0 ? (grossProfit / shopifyRevenue * 100) : 0
-  const marginTarget = 8
+  const marginTarget = 40
   const marginOk = margin >= marginTarget
   const upd = (k, v) => saveLiveMetrics({ ...liveMetrics, [k]: parseFloat(v) || 0 })
 
@@ -124,7 +124,7 @@ function OverviewTab({ totalInv, burnRate, runway, cfg, saveCfg, byCategory, max
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: marginOk ? '#059669' : '#DC2626' }}>{margin.toFixed(1)}%</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>doel: {marginTarget}%</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>doel: ≥{marginTarget}%</span>
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: marginOk ? '#059669' : '#DC2626' }}>{marginOk ? '✓' : `${(marginTarget - margin).toFixed(1)}% tekort`}</span>
           </div>
           {shopifyRevenue > 0 && (

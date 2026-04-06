@@ -598,7 +598,7 @@ export default function Tasks({ user }) {
   return (
     <>
       <div className="page-header">
-        <div><h1>Todo</h1>
+        <div><h1>To-do's</h1>
           <p className="page-subtitle">{counts.todo} to do &middot; {counts.gepland} gepland &middot; {counts.bezig} bezig &middot; {counts.klaar} klaar
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
