@@ -165,7 +165,7 @@ function DagelijkseCheckinsCompact() {
   const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
   const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
   const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
-  const getState = item => item.checkedDate === today ? (item.checkState || 'done') : 'none'
+  const getState = item => item.checkedDate === today ? 'done' : item.status ? 'waiting' : 'none'
   const doneCount = items.filter(i => getState(i)==='done').length
   const waitCount = items.filter(i => getState(i)==='waiting').length
 
@@ -266,7 +266,7 @@ function DagelijkseCheckinsCompact() {
                       onBlur={()=>setEditStatus(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditStatus(null)}}
                       placeholder="bezig met..." style={{width:'100%',border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.62rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-secondary)',padding:0}}/>
                   ) : (
-                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:'0.68rem',color:item.status?'var(--text-primary)':'#D1C4B8',fontWeight:item.status?700:400,fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block',background:item.status?'var(--bg-secondary)':'none',padding:item.status?'0.05rem 0.3rem':'0',borderRadius:'4px'}}>
+                    <span onClick={()=>setEditStatus(item.id)} style={{fontSize:item.status?'0.72rem':'0.62rem',color:item.status?st==='waiting'?'#92400E':'var(--text-primary)':'#D1C4B8',fontWeight:item.status?700:400,fontStyle:item.status?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block',background:item.status?'#FEF3C7':'none',padding:item.status?'0.08rem 0.4rem':'0',borderRadius:'4px'}}>
                       {item.status||'+ status'}
                     </span>
                   )}
