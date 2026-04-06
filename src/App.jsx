@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
 import Launch from './pages/Launch'
+import HealthMonitor from './pages/HealthMonitor'
 import Orders from './pages/Orders'
 import Stock from './pages/Stock'
 import Content from './pages/Content'
@@ -118,6 +119,7 @@ export default function App() {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/stock" element={<Stock />} />
         <Route path="/launch" element={<Launch />} />
+        <Route path="/health" element={<HealthMonitor />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/content" element={<Content />} />
         <Route path="/catalog" element={<Catalog />} />
