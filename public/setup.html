@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head><title>Artazest DB Setup</title>
+<style>
+  body{font-family:system-ui,sans-serif;padding:2rem;background:#111;color:#e0e0e0;max-width:600px;margin:0 auto}
+  h2{color:#f97316} .ok{color:#4ade80} .err{color:#f87171}
+  div.log{padding:0.2rem 0;font-family:monospace;font-size:0.85rem}
+  .done{background:#1a3a1a;border:1px solid #4ade80;padding:1rem;border-radius:8px;margin-top:1rem}
+</style>
+</head>
+<body>
+<h2>🛠 Artazest — Database Setup</h2>
+<p id="status">Even wachten, tabellen worden aangemaakt in Supabase...</p>
+<div id="log"></div>
+<script type="module">
+const SUPABASE_URL = 'https://umtvatbzlsltaxcujcot.supabase.co'
+const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtdHZhdGJ6bHNsdGF4Y3VqY290Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQyODA2NSwiZXhwIjoyMDkxMDA0MDY1fQ.HrNy1t-gHNdSb_lrQmvrj8yh62crYBEr8_PyRjuakYg'
+
+const log = (msg, ok=true) => {
+  document.getElementById('log').innerHTML += `<div class="log">${ok?'✓':'✗'} ${msg}</div>`
+}
+
+const h = { 'Content-Type':'application/json', 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+
+const tables = [
+  { name: 'tasks', sql: `create table if not exists tasks (id text primary key, title text, category text, assignee text, status text default 'todo', priority text default 'normal', notes text, "dueDate" text, "plannedDate" text, tags jsonb default '[]', subtasks jsonb default '[]', completed boolean default false, archived boolean default false, "archivedAt" text, "createdAt" text)` },
+  { name: 'inventory', sql: `create table if not exists inventory (id text primary key, name text, section text, quantity integer default 0, "minStock" integer default 0, "leadTimeDays" integer default 0, supplier text, notes text, "startStock" integer default 0, batches jsonb default '[]')` },
+  { name: 'catalog', sql: `create table if not exists catalog (id text primary key, name text, stage text, colors jsonb default '[]', designer text, notes text, online boolean default false)` },
+  { name: 'investments', sql: `create table if not exists investments (id text primary key, description text, category text, amount numeric default 0, date text, notes text)` },
+  { name: 'settings', sql: `create table if not exists settings (key text primary key, value jsonb)` },
+  { name: 'checkins', sql: `create table if not exists checkins (id text primary key, name text, via text, topic text, "checkedDate" text)` },
+]
+
+// Maak elke tabel aan via de query endpoint
+let allOk = true
+for (const t of tables) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/query`, {
+      method: 'POST', headers: h,
+      body: JSON.stringify({ query: t.sql + '; alter table ' + t.name + ' disable row level security; grant all on ' + t.name + ' to anon, authenticated;' })
+    })
+    // Als rpc/query niet bestaat, probeer direct
+    const d = await r.json()
+    if (d.code === 'PGRST202') {
+      // RPC bestaat niet, check of tabel al bestaat
+      const check = await fetch(`${SUPABASE_URL}/rest/v1/${t.name}?limit=0`, { headers: h })
+      if (check.ok) { log(`${t.name}: bestaat al`) }
+      else { log(`${t.name}: niet aangemaakt (RPC ontbreekt)`, false); allOk = false }
+    } else {
+      log(`${t.name}: aangemaakt`)
+    }
+  } catch(e) {
+    log(`${t.name}: ${e.message}`, false); allOk = false
+  }
+}
+
+if (!allOk) {
+  document.getElementById('status').innerHTML = `
+    <span style="color:#f87171">⚠ Tabellen konden niet automatisch aangemaakt worden.</span><br>
+    Ga naar <a href="https://supabase.com/dashboard/project/umtvatbzlsltaxcujcot/sql/new" target="_blank" style="color:#f97316">Supabase SQL Editor</a>
+    en plak het onderstaande SQL:<br><br>
+    <textarea style="width:100%;height:300px;font-family:monospace;font-size:0.75rem;background:#222;color:#e0e0e0;border:1px solid #444;padding:0.5rem" readonly>${tables.map(t=>t.sql+';').join('\n')}\nalter table tasks disable row level security;\nalter table inventory disable row level security;\nalter table catalog disable row level security;\nalter table investments disable row level security;\nalter table settings disable row level security;\nalter table checkins disable row level security;\ngrant all on tasks to anon, authenticated;\ngrant all on inventory to anon, authenticated;\ngrant all on catalog to anon, authenticated;\ngrant all on investments to anon, authenticated;\ngrant all on settings to anon, authenticated;\ngrant all on checkins to anon, authenticated;</textarea>`
+} else {
+  document.getElementById('status').innerHTML = '<span style="color:#4ade80;font-size:1.1rem">✅ Alle tabellen aangemaakt! Je kunt deze pagina sluiten en de app gebruiken.</span>'
+}
+</script>
+</body>
+</html>

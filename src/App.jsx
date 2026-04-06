@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { auth } from './auth'
+import { api } from './api'
 import { seedData } from './seed'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -19,6 +20,7 @@ export default function App() {
 
   useEffect(() => {
     seedData()
+    api.migrateFromLocalStorage()
     const u = auth.getUser()
     if (u) setUser(u)
   }, [])
