@@ -1184,11 +1184,18 @@ export default function Tasks({ user }) {
   const handleSave=async()=>{
     if(!form.title.trim())return
     try {
-      await api.save('tasks',{...form,...(editing?{id:editing}:{}),createdAt:form.createdAt||new Date().toISOString()})
+      const taskData = {
+        ...form,
+        ...(editing?{id:editing}:{}),
+        createdAt:form.createdAt||new Date().toISOString(),
+        archived: form.archived || false,
+        tags: form.tags || [],
+        subtasks: form.subtasks || [],
+      }
+      await api.save('tasks', taskData)
       resetForm()
       setShowAdd(false)
       setEditing(null)
-      // Als je in een project zit, blijf je erin — taak heeft al die categorie
       reload()
     } catch(err) {
       console.error('Save fout:', err)
