@@ -1024,6 +1024,7 @@ export default function Tasks({ user }) {
   })
   const [showAddProject,setShowAddProject]=useState(false)
   const [newProject,setNewProject]=useState('')
+  const [confirmDeleteProject,setConfirmDeleteProject]=useState(null) // naam van project
 
   const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st))}
   const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps))}
@@ -1033,9 +1034,11 @@ export default function Tasks({ user }) {
     if(!exists) saveProjects([...projects,newProject.trim()])
     setActiveProject(newProject.trim()); setNewProject(''); setShowAddProject(false)
   }
-  const removeProject=name=>{
+  const removeProject=name=>setConfirmDeleteProject(name)
+  const doRemoveProject=name=>{
     saveProjects(projects.filter(p=>p!==name))
     if(activeProject===name) setActiveProject('alle')
+    setConfirmDeleteProject(null)
   }
   const addPhase=()=>{if(!newPhase.trim())return;const key=newPhase.trim().toLowerCase().replace(/\s+/g,'-');if(statuses.find(s=>s.key===key))return;const used=statuses.map(s=>s.color);const color=COLORS.find(c=>!used.includes(c))||COLORS[0];saveStatuses([...statuses,{key,label:newPhase.trim(),color}]);setNewPhase('')}
   const removePhase=key=>{
@@ -1065,8 +1068,7 @@ export default function Tasks({ user }) {
       resetForm()
       setShowAdd(false)
       setEditing(null)
-      // Reset project filter zodat nieuwe taak altijd zichtbaar is
-      if(activeProject!=='alle' && !editing) setActiveProject('alle')
+      // Als je in een project zit, blijf je erin — taak heeft al die categorie
       reload()
     } catch(err) {
       console.error('Save fout:', err)
@@ -1143,12 +1145,12 @@ export default function Tasks({ user }) {
             <button className="btn btn-primary" onClick={()=>{
             resetForm()
             setEditing(null)
-            // Pre-fill categorie als een project actief is
-            if(activeProject!=='alle') {
-              const matchCat = CATEGORIES.find(c=>c.toLowerCase()===activeProject.toLowerCase())
-              if(matchCat) setForm(f=>({...f,category:matchCat}))
-            }
             setShowAdd(true)
+            // Pre-fill categorie als een project actief is — filter blijft actief
+            if(activeProject!=='alle') {
+              const matchCat = CATEGORIES.find(cat=>cat.toLowerCase()===activeProject.toLowerCase())
+              if(matchCat) setTimeout(()=>setForm(f=>({...f,category:matchCat})),0)
+            }
           }}>+ Nieuwe taak</button>
           </div>
         </div>
@@ -1234,6 +1236,24 @@ export default function Tasks({ user }) {
           )}
         </div>
       </div>
+
+      {/* Project verwijderen bevestiging */}
+      {confirmDeleteProject&&(
+        <div className="modal-overlay" onClick={()=>setConfirmDeleteProject(null)}>
+          <div className="modal" style={{maxWidth:'380px',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:'1.5rem',marginBottom:'0.5rem'}}>🗂</div>
+            <h3 style={{marginBottom:'0.5rem'}}>Project verwijderen?</h3>
+            <p style={{fontSize:'0.82rem',color:'var(--text-secondary)',marginBottom:'1.25rem'}}>
+              Weet je zeker dat je <strong>"{confirmDeleteProject}"</strong> wilt verwijderen?<br/>
+              De taken blijven bestaan, alleen het projectfilter verdwijnt.
+            </p>
+            <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
+              <button className="btn btn-outline" onClick={()=>setConfirmDeleteProject(null)}>Annuleren</button>
+              <button className="btn btn-primary" style={{background:'var(--danger)'}} onClick={()=>doRemoveProject(confirmDeleteProject)}>Verwijderen</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Archiveer bevestiging */}
       {confirmArchive&&(
