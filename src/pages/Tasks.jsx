@@ -21,6 +21,65 @@ const fmt = d => new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'sh
 const todayISO = () => new Date().toISOString().slice(0,10)
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
 
+// ─── DAGELIJKSE CHECK-INS (COMPACT — naast header) ──────────────────────────
+function DagelijkseCheckinsCompact() {
+  const today = new Date().toISOString().slice(0,10)
+  const load = () => JSON.parse(localStorage.getItem('artazest_checkins') || '[]')
+  const save = items => localStorage.setItem('artazest_checkins', JSON.stringify(items))
+  const [items, setItems] = useState(load)
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
+  const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
+  const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
+  const isChecked = item => item.checkedDate === today
+  const doneCount = items.filter(isChecked).length
+
+  const toggle = id => { const u = items.map(i => i.id===id?{...i,checkedDate:isChecked(i)?null:today}:i); save(u); setItems(u) }
+  const remove = id => { const u = items.filter(i=>i.id!==id); save(u); setItems(u) }
+  const add = () => {
+    if (!form.name.trim()) return
+    const u = [...items, {...form, id:`ci-${Date.now()}`, checkedDate:null}]
+    save(u); setItems(u); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
+  }
+
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap'}}>
+      {/* Label + teller */}
+      <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',whiteSpace:'nowrap'}}>
+        Check-ins <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)'}}>{doneCount}/{items.length}</span>
+      </span>
+      {/* Pills */}
+      {items.map(item => {
+        const done = isChecked(item)
+        return (
+          <div key={item.id} onClick={()=>toggle(item.id)}
+            title={`${item.name}${item.topic?' — '+item.topic:''} (${item.via})`}
+            style={{display:'flex',alignItems:'center',gap:'0.25rem',padding:'0.18rem 0.5rem',borderRadius:'99px',border:`1.5px solid ${done?'#059669':'var(--border)'}`,background:done?'#F0FDF4':'var(--bg-card)',cursor:'pointer',fontSize:'0.7rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',transition:'all 0.15s',userSelect:'none',whiteSpace:'nowrap'}}>
+            <span style={{fontSize:'0.75rem'}}>{viaIcon[item.via]||'👤'}</span>
+            <span style={{textDecoration:done?'line-through':'none'}}>{item.name}</span>
+            {done&&<span style={{fontSize:'0.6rem'}}>✓</span>}
+            <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.6rem',padding:'0 0 0 0.1rem',lineHeight:1}}
+              onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+          </div>
+        )
+      })}
+      {/* + knopje */}
+      {!showAdd ? (
+        <button onClick={()=>setShowAdd(true)} style={{padding:'0.18rem 0.5rem',borderRadius:'99px',border:'1.5px dashed var(--border)',background:'transparent',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',fontWeight:500}}>+ persoon</button>
+      ) : (
+        <div style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.2rem 0.5rem',borderRadius:'99px',border:'1.5px solid var(--accent)',background:'var(--accent-light)'}}>
+          <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam" style={{border:'none',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',width:'70px',fontFamily:'var(--font-body)',color:'var(--text-primary)'}}/>
+          <select value={form.via} onChange={e=>setForm({...form,via:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.65rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
+            {VIA_OPTIONS.map(v=><option key={v}>{v}</option>)}
+          </select>
+          <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'99px',fontSize:'0.65rem',padding:'0.15rem 0.4rem',cursor:'pointer'}}>+</button>
+          <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.65rem'}}>✕</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── DAGELIJKSE CHECK-INS ───────────────────────────────────────────────────
 const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
 
@@ -603,10 +662,12 @@ export default function Tasks({ user }) {
             {daysToLaunch>0&&<span style={{marginLeft:'0.5rem',padding:'0.15rem 0.5rem',borderRadius:'99px',fontSize:'0.75rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
+        <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+          <DagelijkseCheckinsCompact/>
+          <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
+        </div>
       </div>
 
-      <DagelijkseCheckins/>
       <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit} onTaskUpdate={updateTaskDates}/>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
