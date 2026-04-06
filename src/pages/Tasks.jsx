@@ -760,21 +760,97 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   )
 }
 
-function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask}) {
-  const [isOver,setIsOver]=useState(false)
+function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder}) {
+  const [dropIdx, setDropIdx] = useState(null) // index waar de lijn verschijnt
   const dropRef = React.useRef(null)
+  const cardRefs = React.useRef([])
+
+  // Bereken op welke positie in de lijst de kaart losgelaten wordt
+  const getDropIndex = (e) => {
+    const cards = cardRefs.current.filter(Boolean)
+    for (let i = 0; i < cards.length; i++) {
+      const rect = cards[i].getBoundingClientRect()
+      const mid = rect.top + rect.height / 2
+      if (e.clientY < mid) return i
+    }
+    return cards.length
+  }
+
   return (
     <div style={{display:'flex',flexDirection:'column'}}>
+      {/* Kolom header */}
       <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.55rem',padding:'0.4rem 0.6rem',borderRadius:'var(--radius-md)',background:'var(--bg-secondary)'}}>
-        <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/><span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span><button onClick={onAddTask} title='Nieuwe taak in deze kolom' style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.85rem',padding:'0 0 0 0.4rem',lineHeight:1,fontWeight:400}} onMouseEnter={e=>e.currentTarget.style.color='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>+</button>
+        <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/>
+        <span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span>
+        <span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span>
+        <button onClick={onAddTask} title="Nieuwe taak"
+          style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.9rem',padding:'0 0 0 0.3rem',lineHeight:1}}
+          onMouseEnter={e=>e.currentTarget.style.color='var(--accent)'}
+          onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>+</button>
       </div>
+
+      {/* Drop zone */}
       <div ref={dropRef}
-        onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(!isOver)setIsOver(true)}}
-        onDragLeave={e=>{if(dropRef.current&&!dropRef.current.contains(e.relatedTarget))setIsOver(false)}}
-        onDrop={e=>{e.preventDefault();e.stopPropagation();setIsOver(false);const id=e.dataTransfer.getData('text/plain');if(id)onDrop(status.key,id)}}
-        style={{flex:1,minHeight:'140px',borderRadius:'var(--radius-md)',padding:'0.3rem',background:isOver?'#EFF6FF':'rgba(0,0,0,0.01)',border:isOver?'2px dashed #2563EB':'2px solid transparent',transition:'all 0.1s'}}>
-        {tasks.map(t=>(<TaskCard key={t.id} task={t} statuses={statuses} compact draggable onDragStart={()=>onCardDragStart(t.id)} onDragEnd={onCardDragEnd} onClick={()=>onCardClick(t)} onStatusChange={s=>onStatusChange(t.id,s)} onSubtaskToggle={subId=>onSubtaskToggle(t.id,subId)} onArchive={()=>onArchive(t.id)}/>))}
-        {tasks.length===0&&<div style={{textAlign:'center',padding:'1.25rem 0.5rem',color:'var(--text-secondary)',fontSize:'0.73rem'}}>{isOver?<span style={{color:'#2563EB',fontWeight:600}}>Hier neerzetten</span>:<button onClick={onAddTask} style={{background:'none',border:'1px dashed var(--border)',borderRadius:'8px',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.73rem',padding:'0.5rem 1rem',width:'100%'}} onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>+ Taak toevoegen</button>}</div>}
+        onDragOver={e=>{
+          e.preventDefault(); e.dataTransfer.dropEffect='move'
+          setDropIdx(getDropIndex(e))
+        }}
+        onDragLeave={e=>{
+          if(dropRef.current && !dropRef.current.contains(e.relatedTarget)) setDropIdx(null)
+        }}
+        onDrop={e=>{
+          e.preventDefault(); e.stopPropagation()
+          const id = e.dataTransfer.getData('text/plain') || draggedId
+          const idx = getDropIndex(e)
+          setDropIdx(null)
+          if (!id) return
+          // Check of de kaart al in deze kolom zit
+          const existingIdx = tasks.findIndex(t => t.id === id)
+          if (existingIdx !== -1) {
+            // Reorder binnen kolom
+            onReorder && onReorder(id, idx)
+          } else {
+            // Verplaats van andere kolom
+            onDrop(status.key, id)
+          }
+        }}
+        style={{flex:1,minHeight:'120px',borderRadius:'var(--radius-md)',padding:'0.25rem',background:dropIdx!==null?'rgba(37,99,235,0.03)':'transparent',border:dropIdx!==null?'2px dashed #2563EB20':'2px solid transparent',transition:'all 0.1s'}}>
+
+        {tasks.length === 0 && dropIdx === null && (
+          <div style={{textAlign:'center',padding:'1.5rem 0.5rem'}}>
+            <button onClick={onAddTask}
+              style={{background:'none',border:'1px dashed var(--border)',borderRadius:'8px',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.73rem',padding:'0.5rem 1rem',width:'100%'}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+              onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+              + Taak toevoegen
+            </button>
+          </div>
+        )}
+
+        {tasks.map((t, i) => (
+          <div key={t.id}>
+            {/* Drop indicator lijn VOOR dit item */}
+            {dropIdx === i && (
+              <div style={{height:'3px',background:'#2563EB',borderRadius:'99px',margin:'3px 0',transition:'all 0.1s',boxShadow:'0 0 6px rgba(37,99,235,0.4)'}}/>
+            )}
+            <div ref={el => cardRefs.current[i] = el}>
+              <TaskCard
+                task={t} statuses={statuses} compact draggable showArchiveBtn
+                onDragStart={()=>onCardDragStart(t.id)}
+                onDragEnd={()=>{ onCardDragEnd(); setDropIdx(null) }}
+                onClick={()=>onCardClick(t)}
+                onStatusChange={s=>onStatusChange(t.id,s)}
+                onSubtaskToggle={subId=>onSubtaskToggle(t.id,subId)}
+                onArchive={()=>onArchive(t.id)}
+              />
+            </div>
+          </div>
+        ))}
+
+        {/* Drop indicator lijn NA het laatste item */}
+        {dropIdx === tasks.length && (
+          <div style={{height:'3px',background:'#2563EB',borderRadius:'99px',margin:'3px 0',transition:'all 0.1s',boxShadow:'0 0 6px rgba(37,99,235,0.4)'}}/>
+        )}
       </div>
     </div>
   )
@@ -830,6 +906,23 @@ export default function Tasks({ user }) {
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
   const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||''});setEditing(t.id);setShowAdd(true)}
   const updateStatus=async(id,status)=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,status,completed:status==='klaar'});reload()}}
+  const reorderInColumn=async(taskId, newIdx, columnKey)=>{
+    // Haal alle taken van deze kolom op in huidige volgorde
+    const col = filtered.filter(t => t.status === columnKey)
+    const oldIdx = col.findIndex(t => t.id === taskId)
+    if (oldIdx === -1 || oldIdx === newIdx) return
+    // Bouw nieuwe volgorde
+    const reordered = [...col]
+    const [moved] = reordered.splice(oldIdx, 1)
+    const insertAt = newIdx > oldIdx ? newIdx - 1 : newIdx
+    reordered.splice(insertAt, 0, moved)
+    // Sla sortOrder op per taak
+    for (let i = 0; i < reordered.length; i++) {
+      const t = reordered[i]
+      await api.save('tasks', {...t, sortOrder: i})
+    }
+    reload()
+  }
   const archiveTask=async id=>{
     const t=tasks.find(x=>x.id===id);if(!t)return
     await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()})
@@ -903,7 +996,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||draggedId; if(id)updateStatus(id,ns)}} onCardDragStart={id=>setDraggedId(id)} onCardDragEnd={()=>setDraggedId(null)} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)}/>))}
             </div>
           ):view==='archief'?(
             archived.length===0?<div className="card"><div className="empty-state">Geen gearchiveerde taken</div></div>:
