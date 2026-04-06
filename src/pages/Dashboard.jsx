@@ -235,7 +235,8 @@ export default function Dashboard({ user }) {
 function CostCalcMini() {
   const defaults = { panelCost: 25, frameCost: 8, packCost: 5, printCost: 3, laborMin: 30, hourlyRate: 35, sellPrice: 149 }
   const [c, setC] = useState(() => { try { return JSON.parse(localStorage.getItem('artazest_costs')) || defaults } catch { return defaults } })
-  const update = (key, val) => { const next = { ...c, [key]: parseFloat(val) || 0 }; setC(next); localStorage.setItem('artazest_costs', JSON.stringify(next)) }
+  useEffect(() => { api.getSetting('costs').then(val => { if (val) { setC(val); localStorage.setItem('artazest_costs', JSON.stringify(val)) } }) }, [])
+  const update = (key, val) => { const next = { ...c, [key]: parseFloat(val) || 0 }; setC(next); localStorage.setItem('artazest_costs', JSON.stringify(next)); api.saveSetting('costs', next) }
   const laborCost = (c.laborMin / 60) * c.hourlyRate
   const totalCost = c.panelCost + c.frameCost + c.packCost + c.printCost + laborCost
   const margin = c.sellPrice - totalCost

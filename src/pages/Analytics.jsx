@@ -324,8 +324,8 @@ function InvestmentsTab({ investments, setInvestments, budgets, setBudgets, show
 /* ========== BREAK-EVEN TAB ========== */
 function BreakevenTab({ cfg }) {
   const [be, setBe] = useState({ sellPrice: 149, panelCost: 25, frameCost: 8, packCost: 5, printCost: 3, laborMin: 30, hourlyRate: 35, shippingCost: 12, paymentPct: 2.9, paymentFixed: 0.30, monthlyFixed: cfg.monthlyFixed || 2500 })
-  useEffect(() => { const s = localStorage.getItem('artazest_be'); if (s) setBe(JSON.parse(s)) }, [])
-  useEffect(() => { localStorage.setItem('artazest_be', JSON.stringify(be)) }, [be])
+  useEffect(() => { const s = localStorage.getItem('artazest_be'); if (s) setBe(JSON.parse(s)); api.getSetting('breakeven').then(val => { if (val) { setBe(val); localStorage.setItem('artazest_be', JSON.stringify(val)) } }) }, [])
+  useEffect(() => { localStorage.setItem('artazest_be', JSON.stringify(be)); api.saveSetting('breakeven', be) }, [be])
 
   const laborCost = (be.laborMin / 60) * be.hourlyRate
   const paymentCost = (be.sellPrice * be.paymentPct / 100) + be.paymentFixed
@@ -437,8 +437,8 @@ function BreakevenTab({ cfg }) {
 /* ========== CASHFLOW TAB ========== */
 function CashflowTab({ cfg, saveCfg, totalInv }) {
   const [sc, setSc] = useState({ baseUnits: 5, growthPct: 15, sellPrice: 149, varCost: 65, monthlyFixed: cfg.monthlyFixed || 2500, adSpend1: 500, adGrowth: 10 })
-  useEffect(() => { const s = localStorage.getItem('artazest_cf'); if (s) setSc(JSON.parse(s)) }, [])
-  useEffect(() => { localStorage.setItem('artazest_cf', JSON.stringify(sc)) }, [sc])
+  useEffect(() => { const s = localStorage.getItem('artazest_cf'); if (s) setSc(JSON.parse(s)); api.getSetting('cashflow').then(val => { if (val) { setSc(val); localStorage.setItem('artazest_cf', JSON.stringify(val)) } }) }, [])
+  useEffect(() => { localStorage.setItem('artazest_cf', JSON.stringify(sc)); api.saveSetting('cashflow', sc) }, [sc])
 
   const months = 12
   const scenarios = ['worst', 'base', 'aggressive']
