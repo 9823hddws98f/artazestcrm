@@ -718,7 +718,8 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
   )
 }
 
-function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn}) {
+function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,onDelete,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn}) {
+  const [menuOpen,setMenuOpen]=useState(false)
   const days = daysUntil(t.dueDate)
   const overdue = days!==null&&days<0&&t.status!=='klaar'
   const isToday2 = days===0&&t.status!=='klaar'
@@ -737,7 +738,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
         onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
         onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
         <div style={{display:'flex',alignItems:'flex-start',gap:'0.3rem'}}>
-          <span style={{color:'#C4B8A8',fontSize:'0.7rem',lineHeight:1.3,flexShrink:0,cursor:'grab',userSelect:'none'}}>⠿</span>
+          <span style={{color:'#A8A29E',fontSize:'0.75rem',lineHeight:1.3,flexShrink:0,cursor:'grab',userSelect:'none',letterSpacing:'-1px'}}>⠿</span>
           <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3,flex:1,minWidth:0}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
@@ -748,11 +749,15 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
         </div>
         {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
         {showArchiveBtn&&onArchive&&(
-          <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem'}} onClick={e=>e.stopPropagation()}>
-            <button onClick={onArchive} title="Archiveer" style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.62rem',color:'var(--text-secondary)',padding:'0.1rem 0.2rem',lineHeight:1,borderRadius:'4px'}}
-              onMouseEnter={e=>e.currentTarget.style.color='#D97706'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>
-              📦 archiveer
-            </button>
+          <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem',position:'relative'}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.05rem 0.3rem',lineHeight:1,borderRadius:'4px'}}
+              onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
+            {menuOpen&&<div style={{position:'absolute',right:0,bottom:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
+              <button onClick={()=>{onArchive();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
+              {onDelete&&<button onClick={()=>{onDelete();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'#DC2626',fontFamily:'var(--font-body)'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='none'}>🗑 Verwijder</button>}
+            </div>}
           </div>
         )}
       </div>
@@ -767,7 +772,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
       style={{padding:'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
       <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem'}}>
-        {isDraggable&&<span style={{color:'#C4B8A8',fontSize:'0.85rem',lineHeight:1.5,flexShrink:0,cursor:'grab',userSelect:'none',paddingTop:'0.1rem'}}>⠿</span>}
+        {isDraggable&&<span style={{color:'#A8A29E',fontSize:'1rem',lineHeight:1.5,flexShrink:0,cursor:'grab',userSelect:'none',paddingTop:'0.1rem',letterSpacing:'-1px'}}>⠿</span>}
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:500,fontSize:'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none'}}>{t.isMIT&&<span style={{marginRight:'0.25rem'}}>🔥</span>}{t.title}</div>
           <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',marginTop:'0.15rem',display:'flex',gap:'0.3rem',alignItems:'center',flexWrap:'wrap'}}>
@@ -783,7 +788,16 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
         <div style={{display:'flex',gap:'0.15rem',flexShrink:0,paddingTop:'0.1rem'}} onClick={e=>e.stopPropagation()}>
           {statuses.map(s=><button key={s.key} onClick={()=>onStatusChange(s.key)} title={s.label} style={{width:'22px',height:'22px',borderRadius:'50%',border:t.status===s.key?'none':`2px solid ${s.color}40`,background:t.status===s.key?s.color:'transparent',cursor:'pointer',fontSize:'0.55rem',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{t.status===s.key&&'✓'}</button>)}
         </div>
-        {t.status==='klaar'&&onArchive&&<button onClick={e=>{e.stopPropagation();onArchive()}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-secondary)',whiteSpace:'nowrap',paddingTop:'0.1rem'}}>Archiveer</button>}
+        {onArchive&&<div style={{position:'relative',flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.9rem',color:'var(--text-secondary)',padding:'0.1rem 0.3rem',borderRadius:'4px',lineHeight:1}}
+            onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
+          {menuOpen&&<div style={{position:'absolute',right:0,top:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
+            <button onClick={()=>{onArchive();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
+              onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
+            {onDelete&&<button onClick={()=>{onDelete();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',color:'#DC2626',fontFamily:'var(--font-body)'}}
+              onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='none'}>🗑 Verwijder</button>}
+          </div>}
+        </div>}
       </div>
     </div>
   )
