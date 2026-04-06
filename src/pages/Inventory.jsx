@@ -17,7 +17,7 @@ const SHIPMENT_STATUSES = [
 ]
 const PER_ARTWORK = 2
 // ─── PANELEN RANKING VIEW ────────────────────────────────────────────────────
-function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRegisterUsage, onDelete }) {
+function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRegisterUsage, onDelete, onDeleteUsage, currentUser }) {
   const [selectedItem, setSelectedItem] = useState(null) // detail modal
   const [usageForm, setUsageForm] = useState({ quantity: 1, reason: 'productie', notes: '' })
   const [showUsageForm, setShowUsageForm] = useState(null)
@@ -232,6 +232,15 @@ export default function Inventory() {
     api.getAll('panel_usage').then(setUsageLogs)
   }, [])
   const reloadUsage = () => api.getAll('panel_usage').then(setUsageLogs)
+  const deleteUsage = async (logId, item) => {
+    // Herstel de voorraad
+    const log = usageLogs.find(l => l.id === logId)
+    if (!log) return
+    await api.remove('panel_usage', logId)
+    // Tel voorraad terug op
+    await api.save('inventory', { ...item, quantity: item.quantity + log.quantity })
+    reload(); reloadUsage()
+  }
   const reload = () => api.getAll('inventory').then(setItems)
 
   const registerUsage = async (item, form) => {
@@ -359,6 +368,8 @@ export default function Inventory() {
           onUpdateField={updateField}
           onRegisterUsage={registerUsage}
           onDelete={(id)=>setConfirmDel(id)}
+          onDeleteUsage={deleteUsage}
+          currentUser={localStorage.getItem('artazest_user')||'Tein'}
         />
       )}
       {tab !== 'panelen' && (
