@@ -8,6 +8,7 @@ import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
 import Launch from './pages/Launch'
 import Orders from './pages/Orders'
+import Stock from './pages/Stock'
 import Content from './pages/Content'
 import Catalog from './pages/Catalog'
 import Analytics from './pages/Analytics'
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="/" element={<Dashboard user={user} />} />
         <Route path="/tasks" element={<Tasks user={user} />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/stock" element={<Stock />} />
         <Route path="/launch" element={<Launch />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/content" element={<Content />} />

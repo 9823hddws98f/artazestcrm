@@ -5,7 +5,8 @@ import { api } from '../api'
 const ALL_PAGES = [
   { path: '/', label: 'Dashboard', icon: '◉' },
   { path: '/tasks', label: 'Taken', icon: '☐' },
-  { path: '/inventory', label: 'Voorraad', icon: '▦' },
+  { path: '/inventory', label: 'Inkoop', icon: '▦' },
+  { path: '/stock', label: 'Voorraad', icon: '🎨' },
   { path: '/orders', label: 'Orders', icon: '📦' },
   { path: '/launch', label: 'Launch', icon: '🚀' },
   { path: '/content', label: 'Content', icon: '▶' },
