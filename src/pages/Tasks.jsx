@@ -1058,7 +1058,21 @@ export default function Tasks({ user }) {
 
   useEffect(()=>{reload()},[])
   const reload=()=>api.getAll('tasks').then(setTasks)
-  const handleSave=async()=>{if(!form.title.trim())return;await api.save('tasks',{...form,...(editing?{id:editing}:{}),createdAt:form.createdAt||new Date().toISOString()});resetForm();setShowAdd(false);setEditing(null);reload()}
+  const handleSave=async()=>{
+    if(!form.title.trim())return
+    try {
+      await api.save('tasks',{...form,...(editing?{id:editing}:{}),createdAt:form.createdAt||new Date().toISOString()})
+      resetForm()
+      setShowAdd(false)
+      setEditing(null)
+      // Reset project filter zodat nieuwe taak altijd zichtbaar is
+      if(activeProject!=='alle' && !editing) setActiveProject('alle')
+      reload()
+    } catch(err) {
+      console.error('Save fout:', err)
+      alert('Opslaan mislukt: ' + (err.message||err))
+    }
+  }
   const resetForm=()=>setForm({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
   const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||'',estimatedHours:t.estimatedHours||0,energyLevel:t.energyLevel||'middel',recurring:t.recurring||'nooit',isMIT:t.isMIT||false});setEditing(t.id);setShowAdd(true)}
@@ -1126,7 +1140,16 @@ export default function Tasks({ user }) {
           <DagelijkseCheckinsCompact/>
           <div style={{display:'flex',gap:'0.4rem',flexShrink:0,paddingTop:'0.05rem'}}>
             <WekelijkseTodos/>
-            <button className="btn btn-primary" onClick={()=>{resetForm();setEditing(null);setShowAdd(true)}}>+ Nieuwe taak</button>
+            <button className="btn btn-primary" onClick={()=>{
+            resetForm()
+            setEditing(null)
+            // Pre-fill categorie als een project actief is
+            if(activeProject!=='alle') {
+              const matchCat = CATEGORIES.find(c=>c.toLowerCase()===activeProject.toLowerCase())
+              if(matchCat) setForm(f=>({...f,category:matchCat}))
+            }
+            setShowAdd(true)
+          }}>+ Nieuwe taak</button>
           </div>
         </div>
       </div>
