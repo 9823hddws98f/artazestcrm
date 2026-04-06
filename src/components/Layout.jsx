@@ -5,6 +5,8 @@ const allNavItems = [
   { path: '/', label: 'Dashboard', icon: '◉' },
   { path: '/tasks', label: "To-do's", icon: '☐' },
   { path: '/inventory', label: 'Voorraad', icon: '▦' },
+  { path: '/orders', label: 'Orders', icon: '📦' },
+  { path: '/launch', label: 'Launch', icon: '🚀' },
   { path: '/content', label: 'Content', icon: '▶' },
   { path: '/catalog', label: 'Catalogus', icon: '▣' },
   { path: '/analytics', label: 'Analytics', icon: '◐' },

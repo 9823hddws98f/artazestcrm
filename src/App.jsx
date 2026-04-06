@@ -6,6 +6,8 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
+import Launch from './pages/Launch'
+import Orders from './pages/Orders'
 import Content from './pages/Content'
 import Catalog from './pages/Catalog'
 import Analytics from './pages/Analytics'
@@ -113,6 +115,8 @@ export default function App() {
         <Route path="/" element={<Dashboard user={user} />} />
         <Route path="/tasks" element={<Tasks user={user} />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/launch" element={<Launch />} />
+        <Route path="/orders" element={<Orders />} />
         <Route path="/content" element={<Content />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/analytics" element={<Analytics />} />
