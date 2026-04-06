@@ -708,7 +708,10 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
         style={{padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'grab',background:'var(--bg-card)',marginBottom:'0.28rem',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,userSelect:'none'}}
         onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
         onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
-        <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3}}>{t.title}</div>
+        <div style={{display:'flex',alignItems:'flex-start',gap:'0.3rem'}}>
+          <span style={{color:'#C4B8A8',fontSize:'0.7rem',lineHeight:1.3,flexShrink:0,cursor:'grab',userSelect:'none'}}>⠿</span>
+          <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3,flex:1,minWidth:0}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
           <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
           {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
@@ -736,8 +739,9 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
       style={{padding:'0.75rem 1rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:isDraggable?'grab':'pointer',background:'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.6:1,userSelect:'none',transition:'box-shadow 0.1s'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
       <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem'}}>
+        {isDraggable&&<span style={{color:'#C4B8A8',fontSize:'0.85rem',lineHeight:1.5,flexShrink:0,cursor:'grab',userSelect:'none',paddingTop:'0.1rem'}}>⠿</span>}
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:500,fontSize:'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none'}}>{t.title}</div>
+          <div style={{fontWeight:500,fontSize:'0.875rem',textDecoration:t.status==='klaar'?'line-through':'none'}}>{t.isMIT&&<span style={{marginRight:'0.25rem'}}>🔥</span>}{t.title}</div>
           <div style={{fontSize:'0.72rem',color:'var(--text-secondary)',marginTop:'0.15rem',display:'flex',gap:'0.3rem',alignItems:'center',flexWrap:'wrap'}}>
             <span>{t.assignee}</span>
             <span className="badge badge-amber" style={{fontSize:'0.6rem'}}>{t.category}</span>
