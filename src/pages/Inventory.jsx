@@ -16,6 +16,194 @@ const SHIPMENT_STATUSES = [
   { key: 'vertraagd', label: 'Vertraagd', color: '#DC2626' },
 ]
 const PER_ARTWORK = 2
+// ─── PANELEN RANKING VIEW ────────────────────────────────────────────────────
+function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRegisterUsage, onDelete }) {
+  const [selectedItem, setSelectedItem] = useState(null) // detail modal
+  const [usageForm, setUsageForm] = useState({ quantity: 1, reason: 'productie', notes: '' })
+  const [showUsageForm, setShowUsageForm] = useState(null)
+
+  const today = new Date()
+  const toISO = d => d.toISOString().slice(0,10)
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate()-7)
+
+  const panelUsage = usageLogs.filter(l => items.find(i => i.id === l.itemId))
+
+  // Bereken stats per kleur
+  const ranked = items.map(item => {
+    const logs = panelUsage.filter(l => l.itemId === item.id).sort((a,b)=>a.date>b.date?1:-1)
+    const total = logs.reduce((s,l)=>s+l.quantity,0)
+    const thisWeek = logs.filter(l=>l.date>=toISO(weekAgo)).reduce((s,l)=>s+l.quantity,0)
+    const daysWithData = logs.length > 0 ? Math.max(1, Math.ceil((today - new Date(logs[0].date)) / (1000*60*60*24))) : 0
+    const avgPerDay = daysWithData > 0 ? total / daysWithData : 0
+    const daysLeft = avgPerDay > 0 ? Math.floor(item.quantity / avgPerDay) : null
+
+    // Laatste 7 dagen mini grafiek
+    const last7 = Array.from({length:7},(_,i)=>{
+      const d = new Date(today); d.setDate(today.getDate()-6+i)
+      const iso = toISO(d)
+      return logs.filter(l=>l.date===iso).reduce((s,l)=>s+l.quantity,0)
+    })
+
+    return { ...item, totalUsed: total, thisWeek, avgPerDay, daysLeft, last7, logs }
+  }).sort((a,b) => b.totalUsed - a.totalUsed || b.thisWeek - a.thisWeek || b.quantity - a.quantity)
+
+  const maxUsed = Math.max(...ranked.map(r=>r.totalUsed), 1)
+  const maxLast7 = Math.max(...ranked.flatMap(r=>r.last7), 1)
+
+  const doRegister = (item) => {
+    onRegisterUsage(item, usageForm)
+    setUsageForm({ quantity: 1, reason: 'productie', notes: '' })
+    setShowUsageForm(null)
+  }
+
+  return (
+    <>
+      {/* RANKING LIJST */}
+      <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+        {ranked.map((item, idx) => {
+          const isEmpty = item.quantity === 0 && item.minStock > 0
+          const isLow = item.minStock > 0 && item.quantity < item.minStock
+          const statusColor = isEmpty ? '#DC2626' : isLow ? '#D97706' : '#059669'
+          const urgent = item.daysLeft !== null && item.daysLeft < 60
+          const maxBar = Math.max(...ranked.map(r=>r.last7), 1)
+
+          return (
+            <div key={item.id} style={{borderRadius:'10px',border:`1px solid ${urgent&&item.totalUsed>0?'#FEE2E2':'var(--border)'}`,background:'var(--bg-card)',overflow:'hidden'}}>
+              {/* HOOFD RIJ */}
+              <div style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.65rem 1rem',cursor:'pointer'}}
+                onClick={()=>setSelectedItem(selectedItem?.id===item.id?null:item)}>
+                {/* Nummer */}
+                <div style={{width:'28px',height:'28px',borderRadius:'50%',background:idx===0?'#D97706':idx===1?'#9CA3AF':idx===2?'#CD7F32':'var(--bg-secondary)',color:idx<3?'#fff':'var(--text-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,flexShrink:0}}>
+                  #{idx+1}
+                </div>
+
+                {/* Naam + status dot */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.1rem'}}>
+                    <span style={{width:'8px',height:'8px',borderRadius:'50%',background:statusColor,flexShrink:0}}/>
+                    <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.name}</span>
+                    {idx===0&&item.totalUsed>0&&<span style={{fontSize:'0.6rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#FEF3C7',color:'#92400E',fontWeight:700}}>🔥 #1</span>}
+                    {urgent&&item.totalUsed>0&&<span style={{fontSize:'0.6rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#FEE2E2',color:'#991B1B',fontWeight:700}}>⚠ {item.daysLeft}d</span>}
+                  </div>
+                  {/* Usage balk */}
+                  <div style={{height:'4px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden',maxWidth:'160px'}}>
+                    <div style={{height:'100%',width:`${Math.round(item.totalUsed/maxUsed*100)}%`,background:statusColor,borderRadius:'99px',transition:'width 0.5s'}}/>
+                  </div>
+                </div>
+
+                {/* Mini sparkline 7 dagen */}
+                <div style={{display:'flex',alignItems:'flex-end',gap:'2px',height:'28px',flexShrink:0}}>
+                  {item.last7.map((v,i)=>(
+                    <div key={i} style={{width:'8px',borderRadius:'2px 2px 0 0',background:v>0?'var(--accent)':'rgba(28,25,23,0.08)',height:`${Math.max(v>0?20:4,Math.round(v/maxLast7*28))}%`,minHeight:v>0?'4px':'2px',transition:'height 0.3s'}} title={`${v} panelen`}/>
+                  ))}
+                </div>
+
+                {/* Stats */}
+                <div style={{display:'flex',gap:'1rem',flexShrink:0,fontSize:'0.72rem',textAlign:'center'}}>
+                  <div><div style={{fontWeight:700,fontSize:'0.9rem',color:'var(--text-primary)'}}>{item.totalUsed}</div><div style={{color:'var(--text-secondary)'}}>gebruikt</div></div>
+                  <div><div style={{fontWeight:700,fontSize:'0.9rem',color:'var(--text-primary)'}}>{item.quantity}</div><div style={{color:'var(--text-secondary)'}}>resterend</div></div>
+                </div>
+
+                {/* +/- knoppen */}
+                <div style={{display:'flex',alignItems:'center',gap:'0.3rem',flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                  <button onClick={()=>onUpdateQty(item,-1)} style={{width:'26px',height:'26px',borderRadius:'50%',border:'1px solid var(--border)',background:'none',cursor:'pointer',fontSize:'0.85rem',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-secondary)'}}>-</button>
+                  <span style={{fontWeight:700,minWidth:'30px',textAlign:'center',fontSize:'0.9rem'}}>{item.quantity}</span>
+                  <button onClick={()=>onUpdateQty(item,1)} style={{width:'26px',height:'26px',borderRadius:'50%',border:'1px solid var(--border)',background:'none',cursor:'pointer',fontSize:'0.85rem',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-secondary)'}}>+</button>
+                </div>
+
+                {/* Gebruik registreren */}
+                <button onClick={e=>{e.stopPropagation();setShowUsageForm(showUsageForm===item.id?null:item.id)}}
+                  style={{padding:'0.25rem 0.6rem',borderRadius:'6px',background:'var(--accent)',color:'#fff',border:'none',cursor:'pointer',fontSize:'0.7rem',fontWeight:600,flexShrink:0}}>
+                  + Gebruik
+                </button>
+
+                <span style={{color:'var(--text-secondary)',fontSize:'0.7rem',flexShrink:0}}>{selectedItem?.id===item.id?'▲':'▼'}</span>
+              </div>
+
+              {/* GEBRUIK REGISTREER FORM */}
+              {showUsageForm===item.id&&(
+                <div style={{display:'flex',gap:'0.5rem',alignItems:'flex-end',padding:'0.5rem 1rem',background:'#FFF7ED',borderTop:'1px solid #FED7AA',flexWrap:'wrap'}} onClick={e=>e.stopPropagation()}>
+                  <div>
+                    <div style={{fontSize:'0.6rem',fontWeight:600,color:'var(--text-secondary)',marginBottom:'0.15rem'}}>Aantal</div>
+                    <input type="number" min="1" value={usageForm.quantity} onChange={e=>setUsageForm({...usageForm,quantity:parseInt(e.target.value)||1})}
+                      style={{width:'60px',padding:'0.25rem 0.4rem',border:'1px solid var(--border)',borderRadius:'6px',fontSize:'0.82rem',fontFamily:'var(--font-body)'}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:'0.6rem',fontWeight:600,color:'var(--text-secondary)',marginBottom:'0.15rem'}}>Reden</div>
+                    <select value={usageForm.reason} onChange={e=>setUsageForm({...usageForm,reason:e.target.value})}
+                      style={{padding:'0.25rem 0.4rem',border:'1px solid var(--border)',borderRadius:'6px',fontSize:'0.78rem',fontFamily:'var(--font-body)'}}>
+                      <option value="productie">Productie</option>
+                      <option value="SEM">SEM</option>
+                      <option value="sample">Sample</option>
+                      <option value="beschadigd">Beschadigd</option>
+                      <option value="overig">Overig</option>
+                    </select>
+                  </div>
+                  <div style={{flex:1,minWidth:'100px'}}>
+                    <div style={{fontSize:'0.6rem',fontWeight:600,color:'var(--text-secondary)',marginBottom:'0.15rem'}}>Notitie</div>
+                    <input value={usageForm.notes} onChange={e=>setUsageForm({...usageForm,notes:e.target.value})}
+                      onKeyDown={e=>e.key==='Enter'&&doRegister(item)}
+                      placeholder="bijv. artwork #12" style={{width:'100%',padding:'0.25rem 0.4rem',border:'1px solid var(--border)',borderRadius:'6px',fontSize:'0.78rem',fontFamily:'var(--font-body)',boxSizing:'border-box'}}/>
+                  </div>
+                  <button onClick={()=>doRegister(item)} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'6px',padding:'0.3rem 0.75rem',cursor:'pointer',fontSize:'0.78rem',fontWeight:600}}>Registreer</button>
+                  <button onClick={()=>setShowUsageForm(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:'6px',padding:'0.3rem 0.5rem',cursor:'pointer',fontSize:'0.75rem',color:'var(--text-secondary)'}}>✕</button>
+                </div>
+              )}
+
+              {/* DETAIL DRAWER */}
+              {selectedItem?.id===item.id&&(
+                <div style={{padding:'0.75rem 1rem 1rem',borderTop:'1px solid var(--border)',background:'var(--bg-secondary)'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.5rem',marginBottom:'0.75rem'}}>
+                    {[
+                      ['Totaal gebruikt',item.totalUsed,'panelen'],
+                      ['Deze week',item.thisWeek,'panelen'],
+                      ['Gem./dag',item.avgPerDay>0?item.avgPerDay.toFixed(1):'-','per dag'],
+                      ['Voorraad nog',item.daysLeft!==null?`${item.daysLeft}d`:'∞','bij huidig tempo'],
+                    ].map(([l,v,u])=>(
+                      <div key={l} style={{background:'var(--bg-card)',borderRadius:'8px',padding:'0.5rem 0.65rem',textAlign:'center'}}>
+                        <div style={{fontWeight:700,fontSize:'1.1rem',fontFamily:'var(--font-display)',color:'var(--text-primary)'}}>{v}</div>
+                        <div style={{fontSize:'0.62rem',color:'var(--text-secondary)',fontWeight:600,textTransform:'uppercase'}}>{l}</div>
+                        <div style={{fontSize:'0.58rem',color:'var(--text-secondary)'}}>{u}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Per reden */}
+                  <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.75rem',flexWrap:'wrap'}}>
+                    {['productie','SEM','sample','beschadigd','overig'].map(r=>{
+                      const cnt = item.logs.filter(l=>l.reason===r).reduce((s,l)=>s+l.quantity,0)
+                      if(cnt===0) return null
+                      return <span key={r} style={{padding:'0.2rem 0.55rem',borderRadius:'99px',background:'var(--bg-card)',border:'1px solid var(--border)',fontSize:'0.72rem',fontWeight:600}}>
+                        {r}: <strong>{cnt}</strong>
+                      </span>
+                    })}
+                  </div>
+
+                  {/* Log lijst */}
+                  <div style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)',marginBottom:'0.35rem'}}>Gebruik per dag</div>
+                  <div style={{maxHeight:'180px',overflowY:'auto',display:'flex',flexDirection:'column',gap:'0.2rem'}}>
+                    {item.logs.length===0&&<div style={{fontSize:'0.75rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Nog geen gebruik geregistreerd — gebruik de + Gebruik knop</div>}
+                    {[...item.logs].sort((a,b)=>b.date>a.date?1:-1).map(log=>(
+                      <div key={log.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.28rem 0.5rem',borderRadius:'5px',background:'var(--bg-card)',fontSize:'0.73rem'}}>
+                        <span style={{color:'var(--text-secondary)',flexShrink:0,minWidth:'72px'}}>{log.date}</span>
+                        <span style={{fontWeight:700,color:'var(--accent)',flexShrink:0}}>{log.quantity}×</span>
+                        <span style={{padding:'0.03rem 0.3rem',borderRadius:'4px',background:'var(--bg-secondary)',fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{log.reason}</span>
+                        {log.notes&&<span style={{color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{log.notes}</span>}
+                        <span style={{color:'var(--text-secondary)',marginLeft:'auto',flexShrink:0,fontSize:'0.62rem'}}>{log.registeredBy}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+
 export default function Inventory() {
   const [items, setItems] = useState([])
   const [tab, setTab] = useState('panelen')
@@ -46,26 +234,21 @@ export default function Inventory() {
   const reloadUsage = () => api.getAll('panel_usage').then(setUsageLogs)
   const reload = () => api.getAll('inventory').then(setItems)
 
-  const registerUsage = async (item) => {
-    if (usageForm.quantity <= 0) return
+  const registerUsage = async (item, form) => {
+    if (!form || form.quantity <= 0) return
     const log = {
       id: `use-${Date.now()}`,
-      itemId: item.id,
-      itemName: item.name,
-      quantity: usageForm.quantity,
-      date: new Date().toISOString().slice(0,10),
-      reason: usageForm.reason,
-      registeredBy: 'Tein',
-      notes: usageForm.notes,
-      createdAt: new Date().toISOString()
+      itemId: item.id, itemName: item.name,
+      quantity: form.quantity, date: new Date().toISOString().slice(0,10),
+      reason: form.reason, registeredBy: 'Tein',
+      notes: form.notes, createdAt: new Date().toISOString()
     }
     await api.save('panel_usage', log)
-    // Trek van voorraad af
-    await api.save('inventory', { ...item, quantity: Math.max(0, item.quantity - usageForm.quantity) })
-    setUsageForm({ quantity: 1, reason: 'productie', notes: '' })
-    setShowUsageForm(null)
+    await api.save('inventory', { ...item, quantity: Math.max(0, item.quantity - form.quantity) })
     reload(); reloadUsage()
   }
+
+
   const reloadShipments = () => api.getAll('shipments').then(setShipments)
   useEffect(() => { reloadShipments() }, [])
   const saveShipment = async () => {
@@ -168,18 +351,17 @@ export default function Inventory() {
           )
         })}
       </div>
-      {tab === 'panelen' && panelen.length > 0 && (
-        <div style={{display:'flex',gap:'1rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>
-          <div style={{background:'#F2F0EB',borderRadius:'10px',padding:'0.75rem 1.25rem',flex:1,minWidth:'140px'}}>
-            <div style={{fontSize:'0.7rem',fontWeight:600,color:'#78716C',textTransform:'uppercase',letterSpacing:'0.05em'}}>Gem. voorraad</div>
-            <div style={{fontSize:'1.5rem',fontFamily:'var(--font-display)'}}>{avgStock} <span style={{fontSize:'0.8rem',color:'#78716C'}}>per kleur</span></div>
-          </div>
-          <div style={{background:maxArt<3?'#FEE2E2':'#D1FAE5',borderRadius:'10px',padding:'0.75rem 1.25rem',flex:1,minWidth:'140px'}}>
-            <div style={{fontSize:'0.7rem',fontWeight:600,color:maxArt<3?'#991B1B':'#065F46',textTransform:'uppercase',letterSpacing:'0.05em'}}>Kunstwerken mogelijk</div>
-            <div style={{fontSize:'1.5rem',fontFamily:'var(--font-display)',color:maxArt<3?'#DC2626':'#059669'}}>{maxArt} <span style={{fontSize:'0.8rem',color:'#78716C'}}>({PER_ARTWORK} panelen/stuk)</span></div>
-          </div>
-        </div>
+      {tab === 'panelen' && (
+        <PanelenRankingView
+          items={panelen}
+          usageLogs={usageLogs}
+          onUpdateQty={updateQty}
+          onUpdateField={updateField}
+          onRegisterUsage={registerUsage}
+          onDelete={(id)=>setConfirmDel(id)}
+        />
       )}
+      {tab !== 'panelen' && (
       <div className="card" style={{padding:0}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'1rem 1.25rem',borderBottom:'1px solid rgba(28,25,23,0.08)'}}>
           <h3 style={{margin:0,fontSize:'1.1rem'}}>{SECTIONS.find(s=>s.key===tab)?.label}</h3>
@@ -283,6 +465,7 @@ export default function Inventory() {
           })}</div>
         )}
       </div>
+      )}
       {/* Delete confirmation */}
       {confirmDel && (
         <div className="modal-overlay" onClick={()=>setConfirmDel(null)}>
