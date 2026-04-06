@@ -444,7 +444,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
   )
 }
 
-function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,compact,draggable:isDraggable,onDragStart,onDragEnd}) {
+function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn}) {
   const days = daysUntil(t.dueDate)
   const overdue = days!==null&&days<0&&t.status!=='klaar'
   const isToday2 = days===0&&t.status!=='klaar'
