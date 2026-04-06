@@ -33,8 +33,39 @@ export default function Inventory() {
   const [confirmDelShipment, setConfirmDelShipment] = useState(null)
   const emptyShipment = {description:'',supplier:'Alibaba',orderedDate:new Date().toISOString().slice(0,10),shippedDate:'',expectedDate:'',status:'besteld',quantity:0,unit:'stuks',amount:0,trackingUrl:'',supplierUrl:'',notes:''}
   const [shipForm, setShipForm] = useState(emptyShipment)
-  useEffect(() => { api.getAll('inventory').then(setItems) }, [])
+  const [usageLogs, setUsageLogs] = useState([])
+  const [showUsageForm, setShowUsageForm] = useState(null) // itemId
+  const [usageForm, setUsageForm] = useState({ quantity: 1, reason: 'productie', notes: '' })
+  const [expandedItem, setExpandedItem] = useState(null) // voor detail-view
+  const [activeTab2, setActiveTab2] = useState('overzicht') // 'overzicht' | 'gebruik'
+
+  useEffect(() => {
+    api.getAll('inventory').then(setItems)
+    api.getAll('panel_usage').then(setUsageLogs)
+  }, [])
+  const reloadUsage = () => api.getAll('panel_usage').then(setUsageLogs)
   const reload = () => api.getAll('inventory').then(setItems)
+
+  const registerUsage = async (item) => {
+    if (usageForm.quantity <= 0) return
+    const log = {
+      id: `use-${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      quantity: usageForm.quantity,
+      date: new Date().toISOString().slice(0,10),
+      reason: usageForm.reason,
+      registeredBy: 'Tein',
+      notes: usageForm.notes,
+      createdAt: new Date().toISOString()
+    }
+    await api.save('panel_usage', log)
+    // Trek van voorraad af
+    await api.save('inventory', { ...item, quantity: Math.max(0, item.quantity - usageForm.quantity) })
+    setUsageForm({ quantity: 1, reason: 'productie', notes: '' })
+    setShowUsageForm(null)
+    reload(); reloadUsage()
+  }
   const reloadShipments = () => api.getAll('shipments').then(setShipments)
   useEffect(() => { reloadShipments() }, [])
   const saveShipment = async () => {
@@ -68,6 +99,42 @@ export default function Inventory() {
     return { count: si.length, total: si.reduce((s,i) => s + i.quantity, 0), bad: si.filter(i => i.minStock > 0 && i.quantity < i.minStock).length }
   }
   const panelen = items.filter(i => i.section === 'panelen')
+
+  // Usage analytics berekeningen
+  const today = new Date()
+  const toISO = d => d.toISOString().slice(0,10)
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate()-7)
+  const monthAgo = new Date(today); monthAgo.setDate(today.getDate()-30)
+  const twoWeeksAgo = new Date(today); twoWeeksAgo.setDate(today.getDate()-14)
+
+  const panelUsage = usageLogs.filter(l => {
+    const item = items.find(i => i.id === l.itemId)
+    return item && item.section === 'panelen'
+  })
+  const usageThisWeek = panelUsage.filter(l => l.date >= toISO(weekAgo)).reduce((s,l)=>s+l.quantity,0)
+  const usageLastWeek = panelUsage.filter(l => l.date >= toISO(new Date(weekAgo.getTime()-7*86400000)) && l.date < toISO(weekAgo)).reduce((s,l)=>s+l.quantity,0)
+  const usageThisMonth = panelUsage.filter(l => l.date >= toISO(monthAgo)).reduce((s,l)=>s+l.quantity,0)
+
+  // Per kleur: totaal gebruik + ranking
+  const usageByColor = panelen.map(item => {
+    const logs = panelUsage.filter(l => l.itemId === item.id)
+    const total = logs.reduce((s,l)=>s+l.quantity,0)
+    const lastWeekUsage = logs.filter(l=>l.date>=toISO(weekAgo)).reduce((s,l)=>s+l.quantity,0)
+    const avgPerWeek = panelUsage.length > 0 && total > 0
+      ? total / Math.max(1, Math.ceil((today - new Date(Math.min(...logs.map(l=>new Date(l.date))))) / (7*86400000)))
+      : 0
+    const weeksLeft = avgPerWeek > 0 ? Math.floor(item.quantity / avgPerWeek) : null
+    return { ...item, totalUsed: total, lastWeekUsage, avgPerWeek: Math.round(avgPerWeek*10)/10, weeksLeft }
+  }).sort((a,b) => b.totalUsed - a.totalUsed || b.lastWeekUsage - a.lastWeekUsage)
+
+  // Dagelijkse usage voor grafiek (laatste 14 dagen)
+  const last14 = Array.from({length:14},(_,i)=>{
+    const d = new Date(today); d.setDate(today.getDate()-13+i)
+    const iso = toISO(d)
+    const used = panelUsage.filter(l=>l.date===iso).reduce((s,l)=>s+l.quantity,0)
+    return { date: iso, label: d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'}), used }
+  })
+  const maxDaily = Math.max(...last14.map(d=>d.used),1)
   const avgStock = panelen.length > 0 ? Math.round(panelen.reduce((s,i) => s + i.quantity, 0) / panelen.length) : 0
   const minP = panelen.length > 0 ? Math.min(...panelen.map(i => i.quantity)) : 0
   const maxArt = Math.floor(minP / PER_ARTWORK)
