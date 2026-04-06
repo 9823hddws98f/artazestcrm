@@ -211,6 +211,8 @@ function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRe
                         <span style={{padding:'0.03rem 0.3rem',borderRadius:'4px',background:'var(--bg-secondary)',fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{log.reason}</span>
                         {log.notes&&<span style={{color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{log.notes}</span>}
                         <span style={{color:'var(--text-secondary)',marginLeft:'auto',flexShrink:0,fontSize:'0.62rem'}}>{log.registeredBy}</span>
+                        <button onClick={()=>onDeleteUsage(log.id,item)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',opacity:0.3,flexShrink:0,padding:'0'}}
+                          onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.3'} title="Verwijder registratie">×</button>
                       </div>
                     ))}
                   </div>
