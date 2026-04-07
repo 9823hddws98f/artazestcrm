@@ -14,6 +14,8 @@ import Content from './pages/Content'
 import Catalog from './pages/Catalog'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
+import Maintenance from './pages/Maintenance'
+import Development from './pages/Development'
 
 const now = new Date().toISOString()
 const SEED_TASKS = [
@@ -125,6 +127,8 @@ export default function App() {
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings user={user} />} />
+        <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/development" element={<Development />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

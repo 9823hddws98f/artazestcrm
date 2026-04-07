@@ -153,6 +153,234 @@ function WekelijkseTodos() {
 }
 
 // ─── DAGELIJKSE CHECK-INS (COMPACT — naast header) ──────────────────────────
+// ─── HIRING / ZOEKEN TRACKER ────────────────────────────────────────────────
+function HiringTracker() {
+  const load = () => { try { return JSON.parse(localStorage.getItem('artazest_hiring') || '[]') } catch { return [] } }
+  const save = items => { localStorage.setItem('artazest_hiring', JSON.stringify(items)); api.saveSetting('hiring', items) }
+  const [items, setItems] = useState(load)
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({role:'',platform:'Upwork',status:'zoekend',notes:''})
+  const STATUSES = [{key:'zoekend',label:'Zoekend',color:'#D97706',bg:'#FFFBEB'},{key:'gesprek',label:'In gesprek',color:'#2563EB',bg:'#EFF6FF'},{key:'proef',label:'Proefwerk',color:'#7C3AED',bg:'#F5F3FF'},{key:'aangenomen',label:'Aangenomen',color:'#059669',bg:'#F0FDF4'}]
+
+  useEffect(()=>{ api.getSetting('hiring').then(v=>{ if(v?.length) setItems(v) }) },[])
+
+  const add = () => { if(!form.role.trim()) return; const u=[...items,{id:`h-${Date.now()}`,...form}]; save(u); setItems(u); setForm({role:'',platform:'Upwork',status:'zoekend',notes:''}); setShowAdd(false) }
+  const remove = id => { const u=items.filter(i=>i.id!==id); save(u); setItems(u) }
+  const cycleStatus = id => { const u=items.map(i=>{if(i.id!==id)return i;const idx=STATUSES.findIndex(s=>s.key===i.status);return{...i,status:STATUSES[(idx+1)%STATUSES.length].key}}); save(u); setItems(u) }
+  const updateNotes = (id,notes) => { const u=items.map(i=>i.id===id?{...i,notes}:i); save(u); setItems(u) }
+  const [editNotes, setEditNotes] = useState(null)
+  const active = items.filter(i=>i.status!=='aangenomen')
+
+  return (
+    <div style={{minWidth:'180px',maxWidth:'280px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.15rem'}}>
+        <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Zoeken <span style={{fontWeight:700}}>{active.length}</span></span>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+ vacature</button>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:'0.25rem'}}>
+        {items.map(item=>{
+          const st=STATUSES.find(s=>s.key===item.status)||STATUSES[0]
+          return (
+            <div key={item.id} style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:st.bg,borderLeft:`3px solid ${st.color}`,border:`1px solid ${st.color}30`,display:'flex',alignItems:'center',gap:'0.35rem'}}>
+              <div onClick={()=>cycleStatus(item.id)} style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${st.color}`,background:item.status==='aangenomen'?st.color:'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+                {item.status==='aangenomen'&&<span style={{color:'#fff',fontSize:'0.5rem'}}>✓</span>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.72rem',fontWeight:600,color:'var(--text-primary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.role}</div>
+                {editNotes===item.id?(
+                  <input autoFocus value={item.notes||''} onChange={e=>updateNotes(item.id,e.target.value)} onBlur={()=>setEditNotes(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditNotes(null)}}
+                    style={{width:'100%',border:'none',borderBottom:`1px solid ${st.color}`,background:'transparent',fontSize:'0.6rem',outline:'none',fontFamily:'var(--font-body)',padding:0}}/>
+                ):(
+                  <div onClick={()=>setEditNotes(item.id)} style={{fontSize:'0.6rem',color:item.notes?st.color:'#D1C4B8',fontWeight:item.notes?600:400,fontStyle:item.notes?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {item.notes||'+ notitie'}
+                  </div>
+                )}
+              </div>
+              <span style={{fontSize:'0.5rem',color:'var(--text-secondary)',flexShrink:0}}>{item.platform?.slice(0,2)}</span>
+              <span style={{fontSize:'0.5rem',padding:'0.05rem 0.25rem',borderRadius:'99px',background:`${st.color}20`,color:st.color,fontWeight:700,flexShrink:0}}>{st.label.slice(0,4)}</span>
+              <button onClick={()=>remove(item.id)} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.6rem',padding:0,flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+            </div>
+          )
+        })}
+        {showAdd&&(
+          <div style={{padding:'0.35rem',borderRadius:'6px',border:'1px dashed var(--accent)',background:'var(--accent-light)'}}>
+            <div style={{display:'flex',gap:'0.25rem',alignItems:'center',marginBottom:'0.2rem'}}>
+              <input autoFocus value={form.role} onChange={e=>setForm({...form,role:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Rol (bijv. 3D designer)..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',padding:0,minWidth:0}}/>
+              <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.6rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
+                <option>Upwork</option><option>Fiverr</option><option>LinkedIn</option><option>Direct</option>
+              </select>
+            </div>
+            <div style={{display:'flex',gap:'0.25rem'}}>
+              <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Notitie..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.62rem',outline:'none',fontFamily:'var(--font-body)',padding:0,minWidth:0,color:'var(--text-secondary)'}}/>
+              <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'4px',fontSize:'0.55rem',padding:'0.1rem 0.35rem',cursor:'pointer',fontWeight:600}}>+</button>
+              <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem'}}>✕</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── PLATFORM CHECK-INS ─────────────────────────────────────────────────────
+function PlatformCheckins() {
+  const today = new Date().toISOString().slice(0,10)
+  const load = () => { try { return JSON.parse(localStorage.getItem('artazest_platforms') || '[]') } catch { return [] } }
+  const save = items => { localStorage.setItem('artazest_platforms', JSON.stringify(items)); api.saveSetting('platform_checkins', items) }
+  const DEFAULT = [
+    {id:'pl-1',name:'Upwork',icon:'💼',checked:null},
+    {id:'pl-2',name:'Shopify',icon:'🛒',checked:null},
+    {id:'pl-3',name:'Email',icon:'📧',checked:null},
+    {id:'pl-4',name:'Alibaba',icon:'📦',checked:null},
+    {id:'pl-5',name:'Instagram',icon:'📸',checked:null},
+  ]
+  const ICONS = ['💼','🛒','📧','📦','📸','💬','🎨','📊','🔧','🌐','💳','📱','🎯','📋','🏪','🖥','💰','🔔']
+  const [items, setItems] = useState(load)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newIcon, setNewIcon] = useState('🌐')
+  const [editId, setEditId] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [showIcons, setShowIcons] = useState(null)
+
+  useEffect(()=>{ api.getSetting('platform_checkins').then(v=>{ if(v?.length) setItems(v); else { save(DEFAULT); setItems(DEFAULT) } }) },[])
+
+  const isChecked = item => item.checked === today
+  const toggle = id => { const u=items.map(i=>i.id===id?{...i,checked:isChecked(i)?null:today}:i); save(u); setItems(u) }
+  const remove = id => { const u=items.filter(i=>i.id!==id); save(u); setItems(u) }
+  const add = () => { if(!newName.trim()) return; const u=[...items,{id:`pl-${Date.now()}`,name:newName.trim(),icon:newIcon,checked:null}]; save(u); setItems(u); setNewName(''); setNewIcon('🌐'); setShowAdd(false) }
+  const updateName = (id,name) => { const u=items.map(i=>i.id===id?{...i,name}:i); save(u); setItems(u) }
+  const updateIcon = (id,icon) => { const u=items.map(i=>i.id===id?{...i,icon}:i); save(u); setItems(u); setShowIcons(null) }
+  const doneCount = items.filter(isChecked).length
+
+  return (
+    <div style={{minWidth:'140px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.15rem'}}>
+        <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>
+          Platforms <span style={{color:doneCount===items.length&&items.length>0?'#059669':'var(--text-secondary)',fontWeight:700}}>{doneCount}/{items.length}</span>
+        </span>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+</button>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:'0.2rem'}}>
+        {items.map(item => {
+          const done = isChecked(item)
+          return (
+            <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.35rem',padding:'0.25rem 0.4rem',borderRadius:'6px',background:done?'#F0FDF4':'var(--bg-card)',border:`1px solid ${done?'#BBF7D0':'var(--border)'}`,transition:'all 0.12s',userSelect:'none',position:'relative'}}
+              onMouseEnter={e=>e.currentTarget.style.background=done?'#DCFCE7':'var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background=done?'#F0FDF4':'var(--bg-card)'}>
+              {/* Icon — klik om te wijzigen */}
+              <span onClick={e=>{e.stopPropagation();setShowIcons(showIcons===item.id?null:item.id)}} style={{fontSize:'0.7rem',flexShrink:0,cursor:'pointer',borderRadius:'3px',padding:'0 1px'}}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>{item.icon}</span>
+              {showIcons===item.id&&(
+                <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'100%',left:0,zIndex:99,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'8px',boxShadow:'0 6px 20px rgba(0,0,0,0.12)',padding:'0.4rem',display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:'0.2rem',minWidth:'140px',marginTop:'2px'}}>
+                  {ICONS.map(ic=><button key={ic} onClick={()=>updateIcon(item.id,ic)} style={{fontSize:'0.85rem',padding:'0.2rem',border:'none',background:item.icon===ic?'var(--accent-light)':'none',borderRadius:'4px',cursor:'pointer'}}>{ic}</button>)}
+                </div>
+              )}
+              {/* Naam — dubbelklik om te bewerken */}
+              {editId===item.id ? (
+                <input autoFocus value={editName} onChange={e=>setEditName(e.target.value)}
+                  onBlur={()=>{if(editName.trim())updateName(item.id,editName.trim());setEditId(null)}}
+                  onKeyDown={e=>{if(e.key==='Enter'){if(editName.trim())updateName(item.id,editName.trim());setEditId(null)}if(e.key==='Escape')setEditId(null)}}
+                  onClick={e=>e.stopPropagation()}
+                  style={{flex:1,border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)',padding:0,minWidth:0}}/>
+              ) : (
+                <span onClick={()=>toggle(item.id)} onDoubleClick={e=>{e.stopPropagation();setEditId(item.id);setEditName(item.name)}}
+                  style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',flex:1,textDecoration:done?'line-through':'none',cursor:'pointer'}} title="Dubbelklik om naam te wijzigen">{item.name}</span>
+              )}
+              {done&&<span style={{color:'#059669',fontSize:'0.6rem',flexShrink:0}}>✓</span>}
+              <button onClick={e=>{e.stopPropagation();setEditId(item.id);setEditName(item.name)}} style={{background:'none',border:'none',cursor:'pointer',color:'#9CA3AF',fontSize:'0.55rem',flexShrink:0,padding:'0.1rem',borderRadius:'3px'}}
+                onMouseEnter={e=>{e.currentTarget.style.color='var(--accent)';e.currentTarget.style.background='var(--accent-light)'}} onMouseLeave={e=>{e.currentTarget.style.color='#9CA3AF';e.currentTarget.style.background='none'}} title="Naam wijzigen">✎</button>
+              <button onClick={e=>{e.stopPropagation();if(confirm(`${item.name} verwijderen?`))remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#D1D5DB',fontSize:'0.65rem',flexShrink:0,padding:'0.1rem',borderRadius:'3px'}}
+                onMouseEnter={e=>{e.currentTarget.style.color='#DC2626';e.currentTarget.style.background='#FEE2E2'}} onMouseLeave={e=>{e.currentTarget.style.color='#D1D5DB';e.currentTarget.style.background='none'}} title="Verwijderen">×</button>
+            </div>
+          )
+        })}
+        {showAdd&&(
+          <div style={{padding:'0.3rem',borderRadius:'6px',border:'1px dashed var(--accent)',background:'var(--accent-light)'}}>
+            <div style={{display:'flex',gap:'0.25rem',alignItems:'center'}}>
+              <button onClick={()=>setNewIcon(ICONS[(ICONS.indexOf(newIcon)+1)%ICONS.length])} style={{fontSize:'0.85rem',border:'none',background:'none',cursor:'pointer',padding:0}} title="Klik om icoon te kiezen">{newIcon}</button>
+              <input autoFocus value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')add();if(e.key==='Escape')setShowAdd(false)}} placeholder="Naam..." style={{flex:1,border:'none',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',padding:'0.15rem 0',minWidth:0}}/>
+              <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'4px',fontSize:'0.55rem',padding:'0.12rem 0.35rem',cursor:'pointer',fontWeight:600}}>+</button>
+              <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem'}}>✕</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── DESIGNERS TRACKER ──────────────────────────────────────────────────────
+function DesignersTracker() {
+  const load = () => { try { return JSON.parse(localStorage.getItem('artazest_designers') || '[]') } catch { return [] } }
+  const save = items => { localStorage.setItem('artazest_designers', JSON.stringify(items)); api.saveSetting('designers', items) }
+  const [designers, setDesigners] = useState(load)
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({name:'',task:'',platform:'Upwork'})
+  const PLATFORMS = ['Upwork','Fiverr','Direct','Intern']
+  const STATUS_CYCLE = ['idle','bezig','review','klaar']
+  const STATUS_STYLE = {idle:{bg:'#F5F5F4',border:'#D6D3D1',color:'#78716C',label:'Vrij'},bezig:{bg:'#FEF3C7',border:'#FDE68A',color:'#92400E',label:'Bezig'},review:{bg:'#DBEAFE',border:'#93C5FD',color:'#1D4ED8',label:'Review'},klaar:{bg:'#F0FDF4',border:'#BBF7D0',color:'#059669',label:'Klaar'}}
+
+  useEffect(()=>{ api.getSetting('designers').then(v=>{ if(v?.length) setDesigners(v) }) },[])
+
+  const add = () => { if(!form.name.trim()) return; const d=[...designers,{id:`d-${Date.now()}`,name:form.name.trim(),task:form.task.trim(),platform:form.platform,status:'bezig'}]; save(d); setDesigners(d); setForm({name:'',task:'',platform:'Upwork'}); setShowAdd(false) }
+  const remove = id => { const d=designers.filter(x=>x.id!==id); save(d); setDesigners(d) }
+  const cycleStatus = id => { const d=designers.map(x=>{if(x.id!==id)return x;const i=STATUS_CYCLE.indexOf(x.status||'idle');return{...x,status:STATUS_CYCLE[(i+1)%STATUS_CYCLE.length]}}); save(d); setDesigners(d) }
+  const updateTask = (id,task) => { const d=designers.map(x=>x.id===id?{...x,task}:x); save(d); setDesigners(d) }
+  const [editTask, setEditTask] = useState(null)
+
+  return (
+    <div style={{minWidth:'200px',maxWidth:'500px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.15rem'}}>
+        <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>
+          Designers <span style={{fontWeight:700}}>{designers.filter(d=>d.status==='bezig').length}/{designers.length}</span>
+        </span>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-secondary)',padding:'0'}}>+ designer</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',gap:'0.25rem'}}>
+        {designers.map(d=>{
+          const st = STATUS_STYLE[d.status||'idle']
+          return (
+            <div key={d.id} style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:st.bg,borderLeft:`3px solid ${st.color}`,border:`1px solid ${st.border}`,display:'flex',alignItems:'center',gap:'0.35rem'}}>
+              <div onClick={()=>cycleStatus(d.id)} style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${st.color}`,background:d.status==='klaar'?st.color:'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all 0.15s'}}>
+                {d.status==='klaar'&&<span style={{color:'#fff',fontSize:'0.5rem'}}>✓</span>}
+                {d.status==='bezig'&&<span style={{color:st.color,fontSize:'0.45rem'}}>●</span>}
+                {d.status==='review'&&<span style={{color:st.color,fontSize:'0.45rem'}}>◎</span>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.72rem',fontWeight:600,color:'var(--text-primary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{d.name}</div>
+                {editTask===d.id ? (
+                  <input autoFocus value={d.task||''} onChange={e=>updateTask(d.id,e.target.value)}
+                    onBlur={()=>setEditTask(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape')setEditTask(null)}}
+                    style={{width:'100%',border:'none',borderBottom:`1px solid ${st.color}`,background:'transparent',fontSize:'0.65rem',outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)',padding:0,fontWeight:600}}/>
+                ) : (
+                  <div onClick={e=>{e.stopPropagation();setEditTask(d.id)}} style={{fontSize:d.task?'0.65rem':'0.6rem',color:d.task?'var(--text-primary)':'#D1C4B8',fontWeight:d.task?700:400,fontStyle:d.task?'normal':'italic',cursor:'text',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',background:d.task?`${st.color}18`:'none',padding:d.task?'0.06rem 0.35rem':'0',borderRadius:'3px',marginTop:'0.05rem'}}>
+                    {d.task||'+ waar bezig mee?'}
+                  </div>
+                )}
+              </div>
+              <span style={{fontSize:'0.5rem',color:'var(--text-secondary)',flexShrink:0}}>{d.platform?.slice(0,2)}</span>
+              <button onClick={()=>remove(d.id)} style={{background:'none',border:'none',cursor:'pointer',color:'transparent',fontSize:'0.6rem',padding:0,flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='transparent'}>×</button>
+            </div>
+          )
+        })}
+      </div>
+      {showAdd&&(
+        <div style={{display:'flex',gap:'0.25rem',marginTop:'0.25rem',alignItems:'center'}}>
+          <input autoFocus value={form.name} onChange={e=>setForm({...form,name:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Naam..." style={{flex:1,border:'none',borderBottom:'1px solid var(--accent)',background:'transparent',fontSize:'0.72rem',fontWeight:600,outline:'none',fontFamily:'var(--font-body)',padding:'0.15rem 0',minWidth:0}}/>
+          <input value={form.task} onChange={e=>setForm({...form,task:e.target.value})} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="Bezig met..." style={{flex:1,border:'none',borderBottom:'1px solid var(--border)',background:'transparent',fontSize:'0.65rem',outline:'none',fontFamily:'var(--font-body)',padding:'0.15rem 0',minWidth:0}}/>
+          <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={{border:'none',background:'transparent',fontSize:'0.6rem',outline:'none',cursor:'pointer',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}}>
+            {PLATFORMS.map(p=><option key={p}>{p}</option>)}
+          </select>
+          <button onClick={add} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'4px',fontSize:'0.6rem',padding:'0.15rem 0.4rem',cursor:'pointer',fontWeight:600,flexShrink:0}}>+</button>
+          <button onClick={()=>setShowAdd(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',flexShrink:0}}>✕</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DagelijkseCheckinsCompact() {
   const today = new Date().toISOString().slice(0,10)
   const load = () => { try { return JSON.parse(localStorage.getItem('artazest_checkins') || '[]') } catch { return [] } }
@@ -239,9 +467,8 @@ function DagelijkseCheckinsCompact() {
       {/* Personen — grid, max 4 per kolom */}
       <div style={{
         display:'grid',
-        gridTemplateRows:'repeat(4, auto)',
-        gridAutoFlow:'column',
-        gap:'0.25rem',
+        gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))',
+        gap:'0.3rem',
         alignItems:'start',
         marginBottom:'0.3rem'
       }}>
@@ -254,10 +481,11 @@ function DagelijkseCheckinsCompact() {
               style={{padding:'0.3rem 0.5rem',borderRadius:'6px',background:cs.bg,borderLeft:`3px solid ${cs.dot}`,border:`1px solid ${cs.border}`,cursor:'pointer',transition:'all 0.15s',userSelect:'none'}}
               onClick={()=>toggle(item.id)}>
               <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
-                <div style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${cs.dot}`,background:st!=='none'?cs.dot:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  {st!=='none'&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>{cs.icon}</span>}
+                <div onClick={e=>{e.stopPropagation();toggle(item.id)}} style={{width:'18px',height:'18px',borderRadius:'50%',border:`2px solid ${cs.dot}`,background:st!=='none'?cs.dot:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,cursor:'pointer',transition:'all 0.15s'}}>
+                  {st==='done'&&<span style={{color:'#fff',fontSize:'0.55rem',lineHeight:1}}>✓</span>}
+                  {st==='waiting'&&<span style={{color:'#fff',fontSize:'0.5rem',lineHeight:1}}>⏳</span>}
                 </div>
-                <span style={{fontSize:'0.72rem',fontWeight:600,color:st==='done'?'#059669':st==='waiting'?'#92400E':'var(--text-primary)',whiteSpace:'nowrap',flexShrink:0}}>
+                <span style={{fontSize:'0.78rem',fontWeight:700,color:'#1C1917',whiteSpace:'nowrap',flexShrink:0}}>
                   {item.name}
                 </span>
                 <div style={{flex:1,minWidth:0}} onClick={e=>e.stopPropagation()}>
@@ -275,8 +503,8 @@ function DagelijkseCheckinsCompact() {
                 <button onClick={e=>{e.stopPropagation();toggleNotif(item.id)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.55rem',padding:'0',flexShrink:0}}>
                   {item.notif!==false?'🔔':'🔕'}
                 </button>
-                <button onClick={e=>{e.stopPropagation();remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',padding:'0',flexShrink:0,opacity:0.3}}
-                  onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.3'}>×</button>
+                <button onClick={e=>{e.stopPropagation();if(confirm(`${item.name} verwijderen?`))remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem',padding:'0.15rem 0.25rem',flexShrink:0,opacity:0.5,borderRadius:'4px',lineHeight:1}}
+                  onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.color='#DC2626';e.currentTarget.style.background='#FEE2E2'}} onMouseLeave={e=>{e.currentTarget.style.opacity='0.5';e.currentTarget.style.color='var(--text-secondary)';e.currentTarget.style.background='none'}}>×</button>
               </div>
             </div>
           )
@@ -403,202 +631,95 @@ function DagelijkseCheckins() {
 function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
   const today = new Date(); today.setHours(0,0,0,0)
   const DAYS = 14
-  const BAR_H = 14
   const LANES = ['Tein','Sam','Productie']
+  const LANE_COLORS = {Tein:'#D97706',Sam:'#2563EB',Productie:'#059669'}
   const days = Array.from({length:DAYS},(_,i)=>{ const d=new Date(today); d.setDate(d.getDate()+i); return d })
   const toISO = d => new Date(d).toISOString().slice(0,10)
   const todayStr = toISO(today)
   const launchStr = '2026-04-18'
+  const statusColor = { todo:'#D6D3D1', gepland:'#93C5FD', bezig:'#FCD34D', klaar:'#86EFAC' }
   const [overDay, setOverDay] = useState(null)
-  const [tooltip, setTooltip] = useState(null)
-  const [dragging, setDragging] = useState(null) // {taskId, type:'move'|'resize', startX, origStart, origEnd}
-  const containerRef = useRef(null)
-  const statusColor = { todo:'#9CA3AF', gepland:'#2563EB', bezig:'#D97706', klaar:'#059669' }
-  const launchIdx = Math.round((new Date(launchStr) - today)/(1000*60*60*24))
-  const dayIdx = iso => Math.round((new Date(iso) - today)/(1000*60*60*24))
-
-  const addDays = (iso, n) => {
-    const d = new Date(iso); d.setDate(d.getDate()+n); return toISO(d)
-  }
+  const [clickedDay, setClickedDay] = useState(null)
 
   const ganttTasks = tasks.filter(t => !t.archived && t.status!=='klaar' && t.plannedDate)
 
-  const getTrack = (laneTasks, taskIdx) => {
-    const t = laneTasks[taskIdx]
-    const si = Math.max(0, dayIdx(t.plannedDate||t.dueDate))
-    const ei = Math.min(DAYS-1, dayIdx(t.dueDate||t.plannedDate))
-    for (let track=0; track<6; track++) {
-      const conflict = laneTasks.slice(0,taskIdx).some((other,i) => {
-        if (getTrack(laneTasks,i)!==track) return false
-        const osi = Math.max(0,dayIdx(other.plannedDate||other.dueDate))
-        const oei = Math.min(DAYS-1,dayIdx(other.dueDate||other.plannedDate))
-        return si <= oei && ei >= osi
-      })
-      if(!conflict) return track
-    }
-    return 0
-  }
-
-  // Mouse drag handlers
-  const handleBarMouseDown = (e, task, type) => {
-    e.preventDefault(); e.stopPropagation()
-    setDragging({
-      taskId: task.id, type,
-      startX: e.clientX,
-      origStart: task.plannedDate || task.dueDate,
-      origEnd: task.dueDate || task.plannedDate
+  const tasksForDay = (day, lane) => {
+    const iso = toISO(day)
+    return ganttTasks.filter(t => {
+      if(t.assignee!==lane) return false
+      const start = t.plannedDate || t.dueDate
+      const end = t.dueDate || t.plannedDate
+      return iso >= start && iso <= end
     })
   }
 
-  useEffect(() => {
-    if (!dragging) return
-    const container = containerRef.current
-    if (!container) return
-    const colW = container.offsetWidth / DAYS
-
-    const onMove = e => {
-      const dx = e.clientX - dragging.startX
-      const deltaDays = Math.round(dx / colW)
-      if (deltaDays === 0) return
-      const task = tasks.find(t => t.id === dragging.taskId)
-      if (!task) return
-
-      let newStart = dragging.origStart, newEnd = dragging.origEnd
-      if (dragging.type === 'move') {
-        newStart = addDays(dragging.origStart, deltaDays)
-        newEnd = addDays(dragging.origEnd, deltaDays)
-      } else if (dragging.type === 'resize') {
-        newEnd = addDays(dragging.origEnd, deltaDays)
-        if (new Date(newEnd) < new Date(newStart)) newEnd = newStart
-      }
-      setTooltip({ title: `${newStart} → ${newEnd}`, x: e.clientX, y: e.clientY, isDrag: true })
-    }
-
-    const onUp = e => {
-      const dx = e.clientX - dragging.startX
-      const task = tasks.find(t => t.id === dragging.taskId)
-      if (!task) { setDragging(null); setTooltip(null); return }
-      const container = containerRef.current
-      const colW2 = container ? container.offsetWidth / DAYS : 60
-      const deltaDays = Math.round(dx / colW2)
-
-      if (Math.abs(deltaDays) < 1) {
-        // Geen drag → click → open edit
-        onTaskClick && onTaskClick(task)
-      } else {
-        let newStart = dragging.origStart, newEnd = dragging.origEnd
-        if (dragging.type === 'move') {
-          newStart = addDays(dragging.origStart, deltaDays)
-          newEnd = addDays(dragging.origEnd, deltaDays)
-        } else {
-          newEnd = addDays(dragging.origEnd, deltaDays)
-          if (new Date(newEnd) < new Date(newStart)) newEnd = newStart
-        }
-        onTaskUpdate && onTaskUpdate(task, newStart, newEnd)
-      }
-      setDragging(null); setTooltip(null)
-    }
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [dragging, tasks])
-
   return (
-    <div style={{marginBottom:'1.25rem',border:'1px solid var(--border)',borderRadius:'10px',overflow:'hidden',background:'var(--bg-card)',userSelect:dragging?'none':'auto'}}>
-      {/* DAG HEADER */}
-      <div style={{display:'flex',borderBottom:'1px solid var(--border)',background:'var(--bg-secondary)'}}>
-        <div style={{width:'52px',flexShrink:0,borderRight:'1px solid var(--border)'}}/>
-        <div style={{flex:1,display:'flex'}}>
-          {days.map((day,i) => {
-            const iso=toISO(day); const isToday=iso===todayStr; const isLaunch=iso===launchStr
-            const isWeekend=day.getDay()===0||day.getDay()===6; const isOver=overDay===iso&&!!draggedId&&!dragging
-            return (
-              <div key={iso}
-                onDragOver={e=>{e.preventDefault();if(!dragging)setOverDay(iso)}}
-                onDragLeave={()=>setOverDay(null)}
-                onDrop={e=>{e.preventDefault();setOverDay(null);const _tid=_DRAG_ID||draggedId; if(_tid&&!dragging){onDropDay(_tid,iso);_DRAG_ID=null}}}
-                style={{flex:1,padding:'0.28rem 0.1rem',textAlign:'center',borderRight:i<DAYS-1?'1px solid var(--border)':undefined,background:isOver?'#DBEAFE':isToday?'#FFF7ED':isLaunch?'#FEF3C7':isWeekend?'rgba(0,0,0,0.025)':'transparent',cursor:'default',position:'relative'}}>
-                <div style={{fontSize:'0.52rem',fontWeight:700,textTransform:'uppercase',color:isToday?'#D97706':isLaunch?'#D97706':isWeekend?'#9CA3AF':'var(--text-secondary)',lineHeight:1}}>{day.toLocaleDateString('nl-NL',{weekday:'short'})}</div>
-                <div style={{fontSize:'0.72rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#D97706':'var(--text-primary)',lineHeight:1.25}}>{day.getDate()}</div>
-                {isLaunch&&<div style={{fontSize:'0.45rem',color:'#D97706',fontWeight:700}}>launch</div>}
-                {isOver&&<div style={{position:'absolute',inset:0,border:'2px dashed #2563EB',borderRadius:'2px',pointerEvents:'none'}}/>}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+    <div style={{display:'flex',gap:'2px',alignItems:'flex-end',padding:'0.5rem 0'}}>
+      {days.map((day,i) => {
+        const iso = toISO(day)
+        const isToday = iso===todayStr
+        const isLaunch = iso===launchStr
+        const isWeekend = day.getDay()===0||day.getDay()===6
+        const isOver = overDay===iso && !!draggedId
+        const dayName = day.toLocaleDateString('nl-NL',{weekday:'narrow'})
+        const allDayTasks = LANES.flatMap(l => tasksForDay(day,l))
 
-      {/* SWIMLANES */}
-      {LANES.map((lane,li) => {
-        const laneTasks = ganttTasks.filter(t=>t.assignee===lane)
-        const maxTrack = laneTasks.length===0 ? 0 : Math.max(...laneTasks.map((_,i)=>getTrack(laneTasks,i)))
-        const laneH = Math.max(36, (maxTrack+1)*(BAR_H+4)+10)
         return (
-          <div key={lane} style={{display:'flex',alignItems:'stretch',borderBottom:li<LANES.length-1?'1px solid var(--border)':undefined}}>
-            <div style={{width:'52px',flexShrink:0,borderRight:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg-secondary)'}}>
-              <span style={{fontSize:'0.58rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{lane}</span>
-            </div>
-            <div ref={li===0?containerRef:null} style={{flex:1,position:'relative',height:laneH,overflow:'hidden'}}>
-              {/* Grid */}
-              <div style={{position:'absolute',inset:0,display:'flex',pointerEvents:'none'}}>
-                {days.map((day,i)=>{
-                  const iso=toISO(day); const isToday=iso===todayStr; const isWeekend=day.getDay()===0||day.getDay()===6; const isLaunch=iso===launchStr
-                  return <div key={iso} style={{flex:1,height:'100%',borderRight:i<DAYS-1?'1px solid rgba(28,25,23,0.04)':undefined,background:isToday?'rgba(249,115,22,0.05)':isLaunch?'rgba(217,119,6,0.06)':isWeekend?'rgba(0,0,0,0.015)':'transparent'}}/>
-                })}
-              </div>
-              {/* Vandaag + launch lijnen */}
-              <div style={{position:'absolute',left:`calc(0.5/14*100%)`,top:0,bottom:0,width:'1.5px',background:'#F97316',opacity:0.3,pointerEvents:'none'}}/>
-              {launchIdx>=0&&launchIdx<DAYS&&<div style={{position:'absolute',left:`calc((${launchIdx}+0.5)/14*100%)`,top:0,bottom:0,width:'1.5px',background:'#D97706',opacity:0.4,pointerEvents:'none'}}/>}
+          <div key={iso} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'2px',minWidth:0,cursor:'pointer',position:'relative'}}
+            onClick={()=>setClickedDay(clickedDay===iso?null:iso)}
+            onDragOver={e=>{e.preventDefault();setOverDay(iso)}}
+            onDragLeave={()=>setOverDay(null)}
+            onDrop={e=>{e.preventDefault();setOverDay(null);if(draggedId)onDropDay(draggedId,iso)}}>
 
-              {/* Bars */}
-              {laneTasks.map((task,ti)=>{
-                const si=Math.max(0,dayIdx(task.plannedDate))
-                const ei=task.dueDate?Math.min(DAYS-1,dayIdx(task.dueDate)):si
-                if(si>DAYS-1||ei<0) return null
-                const track=getTrack(laneTasks,ti)
-                const color=task.priority==='high'?'#DC2626':statusColor[task.status]||'#9CA3AF'
-                const subs=task.subtasks||[]; const subPct=subs.length>0?Math.round(subs.filter(s=>s.completed).length/subs.length*100):null
-                const leftPct=(si/DAYS*100).toFixed(2)
-                const widthPct=((ei-si+1)/DAYS*100).toFixed(2)
-                const topPx=5+track*(BAR_H+4)
-                const isDraggingThis = dragging?.taskId===task.id
-
-                return (
-                  <div key={task.id} style={{position:'absolute',left:`${leftPct}%`,width:`calc(${widthPct}% - 3px)`,top:topPx,height:BAR_H,borderRadius:'3px',background:color,opacity:isDraggingThis?0.5:0.85,cursor:dragging?'grabbing':'grab',overflow:'visible',display:'flex',alignItems:'center',zIndex:isDraggingThis?10:2,boxShadow:isDraggingThis?'0 3px 10px rgba(0,0,0,0.25)':'none',transition:'opacity 0.1s'}}
-                    onMouseDown={e=>handleBarMouseDown(e,task,'move')}
-                    onMouseEnter={e=>{if(!dragging)setTooltip({title:task.title,x:e.clientX,y:e.clientY})}}
-                    onMouseMove={e=>{if(!dragging&&tooltip)setTooltip(t=>t?{...t,x:e.clientX,y:e.clientY}:null)}}
-                    onMouseLeave={()=>{if(!dragging)setTooltip(null)}}>
-                    {/* Subtaak voortgang overlay */}
-                    {subPct!==null&&subPct>0&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:`${subPct}%`,background:'rgba(255,255,255,0.22)',borderRadius:'3px 0 0 3px',pointerEvents:'none'}}/>}
-                    {/* Label */}
-                    <span style={{fontSize:'0.52rem',color:'#fff',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',padding:'0 4px',position:'relative',zIndex:1,flex:1,lineHeight:1}}>
-                      {task.title.slice(0,20)}{task.title.length>20?'…':''}
-                    </span>
-                    {/* Resize handle rechts */}
-                    <div
-                      onMouseDown={e=>{e.stopPropagation();handleBarMouseDown(e,task,'resize')}}
-                      style={{width:'8px',height:'100%',cursor:'ew-resize',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'0 3px 3px 0',background:'rgba(0,0,0,0.15)',position:'relative',zIndex:3}}
-                      title="Sleep om deadline aan te passen">
-                      <span style={{color:'rgba(255,255,255,0.7)',fontSize:'0.5rem',lineHeight:1}}>⠿</span>
-                    </div>
-                  </div>
-                )
+            {/* Taak balkjes per lane */}
+            <div style={{width:'100%',minHeight:'60px',display:'flex',flexDirection:'column',gap:'1px',justifyContent:'flex-end'}}>
+              {LANES.map(lane => {
+                const lt = tasksForDay(day,lane)
+                if(lt.length===0) return null
+                return lt.map(t => (
+                  <div key={t.id} onClick={e=>{e.stopPropagation();onTaskClick&&onTaskClick(t)}}
+                    title={`${t.title} (${lane})`}
+                    style={{width:'100%',height:'8px',borderRadius:'2px',background:LANE_COLORS[lane],opacity:t.status==='bezig'?1:0.5,cursor:'pointer',transition:'all 0.15s'}}
+                    onMouseEnter={e=>{e.currentTarget.style.height='16px';e.currentTarget.style.opacity='1'}}
+                    onMouseLeave={e=>{e.currentTarget.style.height='8px';e.currentTarget.style.opacity=t.status==='bezig'?'1':'0.5'}}/>
+                ))
               })}
-              {laneTasks.length===0&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',paddingLeft:'8px'}}><span style={{fontSize:'0.63rem',color:'var(--text-secondary)',fontStyle:'italic'}}>Leeg — sleep een taak hierheen</span></div>}
+              {allDayTasks.length===0&&<div style={{width:'100%',height:'4px',borderRadius:'2px',background:isOver?'#BFDBFE':'transparent',transition:'all 0.15s'}}/>}
             </div>
+
+            {/* Dag indicator */}
+            <div style={{width:'100%',height:isToday?'4px':clickedDay===iso?'3px':'2px',borderRadius:'99px',background:isToday?'#D97706':isLaunch?'#DC2626':clickedDay===iso?'var(--accent)':isOver?'#2563EB':isWeekend?'rgba(0,0,0,0.06)':'rgba(0,0,0,0.1)',transition:'all 0.15s'}}/>
+
+            {/* Label */}
+            <div style={{textAlign:'center',lineHeight:1}}>
+              <div style={{fontSize:'0.5rem',fontWeight:600,color:isToday?'#D97706':isLaunch?'#DC2626':isWeekend?'#D1D5DB':'#9CA3AF',textTransform:'uppercase'}}>{dayName}</div>
+              <div style={{fontSize:'0.68rem',fontWeight:isToday||isLaunch?700:400,color:isToday?'#D97706':isLaunch?'#DC2626':'#78716C'}}>{day.getDate()}</div>
+              {isLaunch&&<div style={{fontSize:'0.4rem',color:'#DC2626',fontWeight:700,marginTop:'-1px'}}>LAUNCH</div>}
+              {allDayTasks.length>0&&<div style={{fontSize:'0.5rem',color:'var(--text-secondary)',fontWeight:600,marginTop:'1px'}}>{allDayTasks.length}</div>}
+            </div>
+
+            {/* Day popup */}
+            {clickedDay===iso&&allDayTasks.length>0&&(
+              <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'100%',left:'50%',transform:'translateX(-50%)',zIndex:99,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'10px',boxShadow:'0 8px 24px rgba(0,0,0,0.12)',padding:'0.5rem',minWidth:'180px',marginTop:'4px'}}>
+                <div style={{fontSize:'0.6rem',fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'0.3rem'}}>{day.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'short'})}</div>
+                {allDayTasks.map(t=>(
+                  <div key={t.id} onClick={()=>{onTaskClick&&onTaskClick(t);setClickedDay(null)}} style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.25rem 0.35rem',borderRadius:'5px',cursor:'pointer',marginBottom:'0.15rem',borderLeft:`3px solid ${LANE_COLORS[t.assignee]||'#9CA3AF'}`}}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>
+                    <span style={{fontSize:'0.72rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{t.title}</span>
+                    <span style={{fontSize:'0.58rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isOver&&<div style={{width:'100%',height:'2px',borderRadius:'99px',background:'#2563EB',marginTop:'-2px'}}/>}
           </div>
         )
       })}
-
-      {draggedId&&!dragging&&<div style={{padding:'0.35rem 0.75rem',fontSize:'0.67rem',color:'#2563EB',background:'#EFF6FF',borderTop:'1px solid #BFDBFE',fontWeight:500}}>Sleep naar een dag om te plannen</div>}
-
-      {/* Tooltip */}
-      {tooltip&&<div style={{position:'fixed',left:tooltip.x+12,top:tooltip.y-30,background:'rgba(28,25,23,0.9)',color:'#fff',fontSize:'0.7rem',padding:'0.25rem 0.55rem',borderRadius:'5px',pointerEvents:'none',zIndex:9999,whiteSpace:'nowrap',fontWeight:500}}>{tooltip.title}</div>}
     </div>
   )
 }
+
 
 function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDragEnd, draggedId, onClearDay }) {
   const today = todayISO()
@@ -730,7 +851,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
   )
 }
 
-function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,onDelete,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn}) {
+function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,onDelete,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn,isSelected,onToggleSelect}) {
   const [menuOpen,setMenuOpen]=useState(false)
   const days = daysUntil(t.dueDate)
   const overdue = days!==null&&days<0&&t.status!=='klaar'
@@ -742,38 +863,46 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
 
   if (compact) {
     return (
-      <div draggable={isDraggable}
-        onDragStart={e=>{if(isDraggable){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);_DRAG_ID=t.id;onDragStart&&onDragStart()}}}
-        onDragEnd={()=>onDragEnd&&onDragEnd()}
-        onClick={onClick}
-        style={{padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'grab',background:'var(--bg-card)',marginBottom:'0.28rem',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,userSelect:'none'}}
-        onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
-        onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
-        <div style={{display:'flex',alignItems:'flex-start',gap:'0.3rem'}}>
-          <span style={{color:'#D6D3D1',fontSize:'0.7rem',lineHeight:1.3,flexShrink:0,cursor:'grab',userSelect:'none',letterSpacing:'1px',padding:'0.05rem 0.1rem',borderRadius:'3px',transition:'all 0.15s'}}
-            onMouseEnter={e=>{e.currentTarget.style.color='#78716C';e.currentTarget.style.background='var(--bg-secondary)'}}
-            onMouseLeave={e=>{e.currentTarget.style.color='#D6D3D1';e.currentTarget.style.background='none'}}>⠿⠿</span>
-          <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3,flex:1,minWidth:0}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
-          <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
-          {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
-          {t.dueDate&&<span style={{fontSize:'0.58rem',fontWeight:600,padding:'0.02rem 0.26rem',borderRadius:'3px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'transparent',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)',whiteSpace:'nowrap'}}>{overdue?`${Math.abs(days)}d te laat`:isToday2?'Vandaag':soon?`${days}d`:fmt(t.dueDate)}</span>}
-          {subPct!==null&&<span style={{fontSize:'0.58rem',color:subPct===100?'#059669':'var(--text-secondary)',marginLeft:'auto',flexShrink:0}}>{subDone}/{subs.length}</span>}
-        </div>
-        {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
-        {showArchiveBtn&&onArchive&&(
-          <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem',position:'relative'}} onClick={e=>e.stopPropagation()}>
-            <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.05rem 0.3rem',lineHeight:1,borderRadius:'4px'}}
-              onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
-            {menuOpen&&<div style={{position:'absolute',right:0,bottom:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
-              <button onClick={()=>{onArchive();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
-                onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
-              {onDelete&&<button onClick={()=>{onDelete();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'#DC2626',fontFamily:'var(--font-body)'}}
-                onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='none'}>🗑 Verwijder</button>}
-            </div>}
+      <div style={{display:'flex',alignItems:'stretch',gap:'0',marginBottom:'0.28rem',userSelect:'none'}}>
+        {/* Checkbox buiten kaart */}
+        {onToggleSelect&&<div style={{display:'flex',alignItems:'center',paddingRight:'0.3rem',flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          <input type="checkbox" checked={!!isSelected} onChange={()=>onToggleSelect(t.id)} style={{width:'14px',height:'14px',cursor:'pointer',accentColor:'var(--accent)'}}/>
+        </div>}
+        {/* Drag handle buiten kaart */}
+        {isDraggable&&<div
+          draggable
+          onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);_DRAG_ID=t.id;onDragStart&&onDragStart()}}
+          onDragEnd={()=>onDragEnd&&onDragEnd()}
+          style={{display:'flex',alignItems:'center',justifyContent:'center',width:'18px',cursor:'grab',flexShrink:0,color:'#D6D3D1',fontSize:'1rem',lineHeight:1,borderRadius:'4px',transition:'color 0.15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.color='#78716C';e.currentTarget.style.background='var(--bg-secondary)'}}
+          onMouseLeave={e=>{e.currentTarget.style.color='#D6D3D1';e.currentTarget.style.background='none'}}>⠿</div>}
+        {/* Kaart zelf */}
+        <div
+          onClick={onClick}
+          style={{flex:1,minWidth:0,padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'pointer',background:isSelected?'#EFF6FF':'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,transition:'all 0.1s'}}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+          <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
+          <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
+            <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
+            {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
+            {t.dueDate&&<span style={{fontSize:'0.58rem',fontWeight:600,padding:'0.02rem 0.26rem',borderRadius:'3px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'transparent',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)',whiteSpace:'nowrap'}}>{overdue?`${Math.abs(days)}d te laat`:isToday2?'Vandaag':soon?`${days}d`:fmt(t.dueDate)}</span>}
+            {subPct!==null&&<span style={{fontSize:'0.58rem',color:subPct===100?'#059669':'var(--text-secondary)',marginLeft:'auto',flexShrink:0}}>{subDone}/{subs.length}</span>}
           </div>
-        )}
+          {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
+          {showArchiveBtn&&onArchive&&(
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem',position:'relative'}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.05rem 0.3rem',lineHeight:1,borderRadius:'4px'}}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
+              {menuOpen&&<div style={{position:'absolute',right:0,bottom:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
+                <button onClick={()=>{onArchive();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
+                {onDelete&&<button onClick={()=>{onDelete();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'#DC2626',fontFamily:'var(--font-body)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='none'}>🗑 Verwijder</button>}
+              </div>}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -819,13 +948,16 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   )
 }
 
-function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder}) {
+function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder,selected,onToggleSelect,onQuickAdd}) {
   // Gebruik ref voor draggedId om stale closure te voorkomen
   const draggedIdRef = React.useRef(null)
   React.useEffect(()=>{ draggedIdRef.current = draggedId },[draggedId])
-  const [dropIdx, setDropIdx] = useState(null) // index waar de lijn verschijnt
+  const [dropIdx, setDropIdx] = useState(null)
   const dropRef = React.useRef(null)
   const cardRefs = React.useRef([])
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickTitle, setQuickTitle] = useState('')
+  const submitQuick = () => { if(!quickTitle.trim()) return; onQuickAdd&&onQuickAdd(quickTitle.trim()); setQuickTitle(''); setQuickAddOpen(false) }
 
   // Bereken op welke positie in de lijst de kaart losgelaten wordt
   const getDropIndex = (e) => {
@@ -838,10 +970,15 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
     return cards.length
   }
 
+  const allSelected = tasks.length>0 && tasks.every(t=>selected&&selected.has(t.id))
+  const someSelected = tasks.some(t=>selected&&selected.has(t.id))
+  const toggleAll = () => { if(allSelected){tasks.forEach(t=>onToggleSelect&&onToggleSelect(t.id))}else{tasks.forEach(t=>{if(!selected||!selected.has(t.id))onToggleSelect&&onToggleSelect(t.id)})}}
+
   return (
     <div style={{display:'flex',flexDirection:'column'}}>
       {/* Kolom header */}
       <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.55rem',padding:'0.4rem 0.6rem',borderRadius:'var(--radius-md)',background:'var(--bg-secondary)'}}>
+        <input type="checkbox" checked={allSelected} ref={el=>{if(el)el.indeterminate=someSelected&&!allSelected}} onChange={toggleAll} onClick={e=>e.stopPropagation()} style={{width:'13px',height:'13px',cursor:'pointer',accentColor:'var(--accent)',flexShrink:0}} title={allSelected?'Deselecteer kolom':'Selecteer kolom'}/>
         <span style={{width:'7px',height:'7px',borderRadius:'50%',background:status.color,flexShrink:0}}/>
         <span style={{fontSize:'0.79rem',fontWeight:600}}>{status.label}</span>
         <span style={{fontSize:'0.7rem',color:'var(--text-secondary)',marginLeft:'auto',fontWeight:500}}>{tasks.length}</span>
@@ -896,6 +1033,7 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
             <div ref={el => cardRefs.current[i] = el}>
               <TaskCard
                 task={t} statuses={statuses} compact draggable showArchiveBtn
+                isSelected={selected&&selected.has(t.id)} onToggleSelect={onToggleSelect}
                 onDragStart={()=>onCardDragStart(t.id)}
                 onDragEnd={()=>{ onCardDragEnd(); setDropIdx(null) }}
                 onClick={()=>onCardClick(t)}
@@ -910,6 +1048,22 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
         {/* Drop indicator lijn NA het laatste item */}
         {dropIdx === tasks.length && (
           <div style={{height:'3px',background:'#2563EB',borderRadius:'99px',margin:'3px 0',transition:'all 0.1s',boxShadow:'0 0 6px rgba(37,99,235,0.4)'}}/>
+        )}
+
+        {/* Quick add */}
+        {quickAddOpen ? (
+          <div style={{padding:'0.35rem',borderRadius:'6px',border:'1px solid var(--accent)',background:'var(--bg-card)',marginTop:'0.2rem'}}>
+            <input autoFocus value={quickTitle} onChange={e=>setQuickTitle(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter')submitQuick();if(e.key==='Escape'){setQuickAddOpen(false);setQuickTitle('')}}}
+              placeholder="Taaknaam..." style={{width:'100%',border:'none',background:'transparent',fontSize:'0.78rem',fontWeight:500,outline:'none',fontFamily:'var(--font-body)',color:'var(--text-primary)',padding:'0.15rem 0'}}/>
+            <div style={{display:'flex',gap:'0.25rem',marginTop:'0.2rem'}}>
+              <button onClick={submitQuick} style={{flex:1,padding:'0.2rem',borderRadius:'4px',background:'var(--accent)',color:'#fff',border:'none',cursor:'pointer',fontSize:'0.68rem',fontWeight:600}}>Toevoegen</button>
+              <button onClick={()=>{setQuickAddOpen(false);setQuickTitle('')}} style={{padding:'0.2rem 0.4rem',borderRadius:'4px',border:'1px solid var(--border)',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-secondary)'}}>✕</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={()=>setQuickAddOpen(true)} style={{width:'100%',padding:'0.3rem',borderRadius:'6px',border:'1px dashed var(--border)',background:'transparent',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.68rem',marginTop:'0.2rem',transition:'all 0.12s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.color='var(--accent)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--text-secondary)'}}>+ Nieuwe taak</button>
         )}
       </div>
     </div>
@@ -1122,6 +1276,12 @@ export default function Tasks({ user }) {
   const [draggedId,setDraggedId]=useState(null)
   const [undoToast,setUndoToast]=useState(null) // {id, title, timer}
   const [confirmArchive,setConfirmArchive]=useState(null) // {id, title}
+  const [selected,setSelected]=useState(new Set())
+  const toggleSelect=(id,e)=>{e&&e.stopPropagation();setSelected(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n})}
+  const selectAll=()=>{const ids=filtered.map(t=>t.id);setSelected(new Set(ids))}
+  const clearSelection=()=>setSelected(new Set())
+  const bulkArchive=async()=>{for(const id of selected){const t=tasks.find(x=>x.id===id);if(t)await api.save('tasks',{...t,archived:true,archivedAt:new Date().toISOString()})};clearSelection();reload()}
+  const bulkDelete=async()=>{for(const id of selected)await api.remove('tasks',id);clearSelection();reload()}
   const [form,setForm]=useState({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
   const [tagInput,setTagInput]=useState('')
   const [subtaskInput,setSubtaskInput]=useState('')
@@ -1133,6 +1293,7 @@ export default function Tasks({ user }) {
   })
   const [showPhaseEdit,setShowPhaseEdit]=useState(false)
   const [newPhase,setNewPhase]=useState('')
+  const [timelineOpen,setTimelineOpen]=useState(false)
   const [activeProject,setActiveProject]=useState('alle')
   const [projects,setProjects]=useState(()=>{
     try { return JSON.parse(localStorage.getItem('artazest_projects') || '[]') }
@@ -1140,7 +1301,10 @@ export default function Tasks({ user }) {
   })
   const [showAddProject,setShowAddProject]=useState(false)
   const [newProject,setNewProject]=useState('')
-  const [confirmDeleteProject,setConfirmDeleteProject]=useState(null) // naam van project
+  const [confirmDeleteProject,setConfirmDeleteProject]=useState(null)
+  const [showBulkPaste,setShowBulkPaste]=useState(false)
+  const [bulkText,setBulkText]=useState('')
+  const [bulkPreview,setBulkPreview]=useState(null) // naam van project
 
   const saveStatuses=st=>{setStatuses(st);localStorage.setItem('artazest_statuses',JSON.stringify(st));api.saveSetting('statuses',st)}
   const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps));api.saveSetting('projects',ps)}
@@ -1272,23 +1436,57 @@ export default function Tasks({ user }) {
 
   return (
     <>
-      <div className="page-header" style={{alignItems:'flex-start'}}>
-        <div><h1>To-do's</h1>
-        </div>
-        <div style={{display:'flex',alignItems:'flex-start',gap:'0.5rem',flex:1}}>
-          <DagelijkseCheckinsCompact/>
-          <div style={{display:'flex',gap:'0.4rem',flexShrink:0,paddingTop:'0.05rem'}}>
-            <WekelijkseTodos/>
-            <button className="btn btn-primary" onClick={()=>{
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.5rem'}}>
+        <h1 style={{margin:0,flexShrink:0}}>To-do's</h1>
+        <div style={{display:'flex',gap:'0.4rem',alignItems:'center',flexShrink:0}}>
+          <WekelijkseTodos/>
+          <button className="btn btn-primary" onClick={()=>{
             resetForm()
             setEditing(null)
             setShowAdd(true)
           }}>+ Nieuwe taak</button>
-          </div>
         </div>
+      </div>
+      <div style={{display:'flex',alignItems:'flex-start',gap:'0.75rem',marginBottom:'0.35rem',overflowX:'auto',paddingBottom:'0.15rem'}}>
+        <DagelijkseCheckinsCompact/>
+        <HiringTracker/>
+        <DesignersTracker/>
+        <PlatformCheckins/>
       </div>
 
       <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit} onTaskUpdate={updateTaskDates}/>
+
+      {/* Signal & Sticky lane */}
+      <div style={{marginBottom:'0.5rem',padding:'0.4rem 0.6rem',borderRadius:'10px',background:'linear-gradient(90deg,#FEF3C720,#DBEAFE20)',border:'1px solid var(--border)',minHeight:'42px'}}
+        onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C740,#DBEAFE40)'}}
+        onDragLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C720,#DBEAFE20)'}}
+        onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C720,#DBEAFE20)';const id=_DRAG_ID||e.dataTransfer.getData('text/plain')||draggedId;if(id){const t=tasks.find(x=>x.id===id);if(t&&!t.isSticky&&active.filter(x=>x.isSticky).length<8){api.save('tasks',{...t,isSticky:true});_DRAG_ID=null;setDraggedId(null);reload()}}}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.25rem'}}>
+          <span style={{fontSize:'0.58rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>📌 Signal & Sticky</span>
+          <span style={{fontSize:'0.55rem',color:'var(--text-secondary)'}}>{active.filter(t=>t.isSticky).length}/8</span>
+        </div>
+        <div style={{display:'flex',gap:'0.4rem',overflowX:'auto',paddingBottom:'0.15rem'}}>
+          {active.filter(t=>t.isSticky).slice(0,8).map(t=>{
+            const st=statuses.find(s=>s.key===t.status)||statuses[0]
+            const days=t.dueDate?Math.ceil((new Date(t.dueDate)-new Date())/864e5):null
+            const overdue=days!==null&&days<0
+            return (
+              <div key={t.id} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDraggedId(t.id)}} onDragEnd={()=>setDraggedId(null)}
+                onClick={()=>startEdit(t)}
+                style={{flexShrink:0,padding:'0.3rem 0.6rem',borderRadius:'8px',border:`1px solid ${overdue?'#FECACA':st.color+'40'}`,background:'var(--bg-card)',cursor:'grab',display:'flex',alignItems:'center',gap:'0.35rem',maxWidth:'200px',transition:'all 0.12s'}}
+                onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
+                <span style={{width:'6px',height:'6px',borderRadius:'50%',background:st.color,flexShrink:0}}/>
+                <span style={{fontSize:'0.72rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</span>
+                {overdue&&<span style={{fontSize:'0.55rem',color:'#DC2626',fontWeight:700,flexShrink:0}}>{Math.abs(days)}d</span>}
+                {t.priority==='high'&&<span style={{fontSize:'0.5rem',color:'#DC2626',flexShrink:0}}>!</span>}
+                <button onClick={e=>{e.stopPropagation();api.save('tasks',{...t,isSticky:false});reload()}} style={{background:'none',border:'none',cursor:'pointer',color:'#D1D5DB',fontSize:'0.6rem',flexShrink:0,padding:0}}
+                  onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='#D1D5DB'}>✕</button>
+              </div>
+            )
+          })}
+          {active.filter(t=>t.isSticky).length===0&&<span style={{fontSize:'0.68rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.1rem 0'}}>Sleep taken hierheen om ze te pinnen (max 8)</span>}
+        </div>
+      </div>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
         <div className="tabs" style={{marginBottom:0,borderBottom:'none'}}>{views.map(v=><button key={v.key} className={`tab ${view===v.key?'active':''}`} onClick={()=>setView(v.key)}>{v.label}</button>)}</div>
@@ -1355,6 +1553,17 @@ export default function Tasks({ user }) {
         {daysToLaunch>0&&<span style={{padding:'0.12rem 0.5rem',borderRadius:'99px',fontSize:'0.72rem',fontWeight:600,background:daysToLaunch<=7?'var(--danger-light)':daysToLaunch<=14?'var(--accent-light)':'var(--info-light)',color:daysToLaunch<=7?'var(--danger)':daysToLaunch<=14?'var(--accent-text)':'var(--info)'}}>{daysToLaunch}d tot launch</span>}
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size>0&&(
+        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.5rem 0.75rem',marginBottom:'0.75rem',borderRadius:'10px',background:'#EFF6FF',border:'1px solid #BFDBFE'}}>
+          <span style={{fontSize:'0.82rem',fontWeight:700,color:'#1D4ED8'}}>{selected.size} geselecteerd</span>
+          <button onClick={clearSelection} style={{fontSize:'0.72rem',background:'none',border:'none',cursor:'pointer',color:'#2563EB',fontWeight:600,textDecoration:'underline'}}>Deselecteer</button>
+          <div style={{flex:1}}/>
+          <button onClick={async()=>{if(confirm(selected.size+' taken archiveren?'))await bulkArchive()}} style={{padding:'0.3rem 0.7rem',borderRadius:'6px',border:'1px solid #D97706',background:'#FFFBEB',color:'#92400E',fontSize:'0.72rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.3rem'}}>📦 Archiveer</button>
+          <button onClick={async()=>{if(confirm(selected.size+' taken PERMANENT verwijderen?'))await bulkDelete()}} style={{padding:'0.3rem 0.7rem',borderRadius:'6px',border:'1px solid #DC2626',background:'#FEF2F2',color:'#DC2626',fontSize:'0.72rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.3rem'}}>🗑 Verwijder</button>
+        </div>
+      )}
+
       {showPhaseEdit&&(<div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem'}}>
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.75rem'}}><span style={{fontSize:'0.8rem',fontWeight:600}}>Fases beheren</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)'}}>min. 2 fases</span></div>
         <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.75rem'}}>{statuses.map(s=>(<div key={s.key} style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.3rem 0.6rem',borderRadius:'99px',border:'1px solid var(--border)',fontSize:'0.8rem'}}><span style={{width:'8px',height:'8px',borderRadius:'50%',background:s.color}}/><span style={{fontWeight:500}}>{s.label}</span>{statuses.length>2&&<button onClick={()=>removePhase(s.key)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',marginLeft:'0.15rem'}}>x</button>}</div>))}</div>
@@ -1366,7 +1575,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);_DRAG_ID=null}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);_DRAG_ID=null}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)} selected={selected} onToggleSelect={toggleSelect} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:st.key,priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}}/>))}
             </div>
           ):view==='archief'?(
             view==='kalender' ? <KalenderView tasks={filtered} onTaskClick={startEdit} onAddTask={(date)=>{resetForm();setForm(f=>({...f,dueDate:date}));setShowAdd(true)}}/> :
@@ -1464,7 +1673,7 @@ export default function Tasks({ user }) {
             <div className="form-group"><label className="form-label">Prioriteit</label><button className="btn btn-sm" onClick={()=>setForm({...form,priority:form.priority==='high'?'normal':'high'})} style={{width:'100%',justifyContent:'center',fontSize:'0.75rem',background:form.priority==='high'?'var(--danger)':'transparent',color:form.priority==='high'?'#fff':undefined,border:form.priority==='high'?'none':'1px solid var(--border-strong)'}}>Urgent</button></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
-            <div className="form-group"><label className="form-label">Categorie</label><select className="form-select" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div className="form-group"><label className="form-label">Categorie</label><input className="form-input" list="task-categories" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Typ of kies..."/><datalist id="task-categories">{[...new Set([...CATEGORIES,...projects])].map(c=><option key={c} value={c}/>)}</datalist></div>
             <div className="form-group"><label className="form-label">Deadline</label><input className="form-input" type="date" value={form.dueDate||''} onChange={e=>setForm({...form,dueDate:e.target.value})}/></div>
             <div className="form-group"><label className="form-label">Plan op dag</label><input className="form-input" type="date" value={form.plannedDate||''} onChange={e=>setForm({...form,plannedDate:e.target.value,status:e.target.value&&form.status==='todo'?'gepland':form.status})}/></div>
           </div>

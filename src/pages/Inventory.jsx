@@ -353,6 +353,43 @@ export default function Inventory() {
   const avgStock = panelen.length > 0 ? Math.round(panelen.reduce((s,i) => s + i.quantity, 0) / panelen.length) : 0
   const minP = panelen.length > 0 ? Math.min(...panelen.map(i => i.quantity)) : 0
   const maxArt = Math.floor(minP / PER_ARTWORK)
+  const [stockTodos, setStockTodos] = useState([{id:'st-default-1',title:'Nieuwe houten lijsten kopen',done:false,priority:'high',description:'',assignee:'Tein',dueDate:'',createdAt:new Date().toISOString(),archived:false}])
+  const [showAddTodo, setShowAddTodo] = useState(false)
+  const [todoInput, setTodoInput] = useState('')
+  const [editTodo, setEditTodo] = useState(null)
+  const [todoMenu, setTodoMenu] = useState(null)
+  const [quickOrders, setQuickOrders] = useState([])
+  const [showAddOrder, setShowAddOrder] = useState(false)
+  const [orderForm, setOrderForm] = useState({title:'',shop:'Alibaba',link:'',quantity:'',price:'',orderedAt:'',transitDays:'',notes:''})
+  const [editOrder, setEditOrder] = useState(null)
+
+  useEffect(() => {
+    api.getSetting('stock_todos').then(v => { if(v?.length) setStockTodos(v) })
+  }, [])
+  const saveTodos = items => { setStockTodos(items); api.saveSetting('stock_todos', items) }
+  const addTodo = () => { if(!todoInput.trim()) return; saveTodos([...stockTodos,{id:`st-${Date.now()}`,title:todoInput.trim(),done:false,priority:'normal',description:'',assignee:'Tein',dueDate:'',createdAt:new Date().toISOString(),archived:false}]); setTodoInput(''); setShowAddTodo(false) }
+  const toggleTodo = id => saveTodos(stockTodos.map(t=>t.id===id?{...t,done:!t.done}:t))
+  const removeTodo = id => saveTodos(stockTodos.filter(t=>t.id!==id))
+  const archiveTodo = id => saveTodos(stockTodos.map(t=>t.id===id?{...t,archived:true}:t))
+  const updateTodo = (id, updates) => saveTodos(stockTodos.map(t=>t.id===id?{...t,...updates}:t))
+  const openTodos = stockTodos.filter(t=>!t.done&&!t.archived)
+  const doneTodos = stockTodos.filter(t=>t.done&&!t.archived)
+  const archivedTodos = stockTodos.filter(t=>t.archived)
+
+  // Quick Orders
+  useEffect(()=>{ api.getSetting('quick_orders').then(v=>{ if(v?.length) setQuickOrders(v) }) },[])
+  const saveOrders = items => { setQuickOrders(items); api.saveSetting('quick_orders', items) }
+  const addOrder = () => {
+    if(!orderForm.title.trim()) return
+    const eta = orderForm.orderedAt && orderForm.transitDays ? new Date(new Date(orderForm.orderedAt).getTime()+parseInt(orderForm.transitDays)*864e5).toISOString().slice(0,10) : ''
+    saveOrders([...quickOrders,{id:`ord-${Date.now()}`,...orderForm,eta,status:'onderweg',createdAt:new Date().toISOString()}])
+    setOrderForm({title:'',shop:'Alibaba',link:'',quantity:'',price:'',orderedAt:'',transitDays:'',notes:''});setShowAddOrder(false)
+  }
+  const updateOrder = (id,u) => saveOrders(quickOrders.map(o=>o.id===id?{...o,...u}:o))
+  const removeOrder = id => saveOrders(quickOrders.filter(o=>o.id!==id))
+  const activeOrders = quickOrders.filter(o=>o.status!=='geleverd')
+  const deliveredOrders = quickOrders.filter(o=>o.status==='geleverd')
+
   return (
     <>
       <div className="page-header" style={{alignItems:'flex-start'}}>
@@ -370,6 +407,191 @@ export default function Inventory() {
           onDelete={id=>setConfirmDelShipment(id)}
         />
       </div>
+
+      {/* Voorraad To-Do's */}
+      <div style={{marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
+          <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>To-do's</span>
+          <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{openTodos.length}/{stockTodos.filter(t=>!t.archived).length}</span>
+          <button onClick={()=>setShowAddTodo(!showAddTodo)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--accent)',fontWeight:600,marginLeft:'auto'}}>+ Toevoegen</button>
+        </div>
+        {showAddTodo&&<div style={{display:'flex',gap:'0.35rem',marginBottom:'0.5rem'}}>
+          <input autoFocus value={todoInput} onChange={e=>setTodoInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTodo()} placeholder="Nieuwe voorraad to-do..." className="form-input" style={{flex:1,fontSize:'0.8rem',padding:'0.35rem 0.6rem'}}/>
+          <button onClick={addTodo} className="btn btn-sm btn-primary" style={{flexShrink:0}}>+</button>
+          <button onClick={()=>setShowAddTodo(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
+        </div>}
+        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
+          {openTodos.map(t=>{
+            const dLeft = t.dueDate ? Math.ceil((new Date(t.dueDate)-new Date())/864e5) : null
+            const isOverdue = dLeft!==null && dLeft<0
+            const isSoon = dLeft!==null && dLeft>=0 && dLeft<=3
+            const deadlineColor = isOverdue?'#DC2626':isSoon?'#D97706':dLeft!==null?'var(--accent)':'var(--border)'
+            return (
+            <div key={t.id} style={{position:'relative',minWidth:'200px',maxWidth:'300px'}}>
+              <div onClick={()=>setEditTodo(t)} style={{display:'flex',alignItems:'flex-start',gap:'0.5rem',padding:'0.65rem 0.85rem',borderRadius:'12px',border:`1px solid ${t.priority==='high'?'#FECACA':'var(--border)'}`,background:t.priority==='high'?'#FEF2F2':'var(--bg-card)',cursor:'pointer',transition:'all 0.15s',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':deadlineColor}`,borderBottom:t.dueDate?`2px solid ${deadlineColor}`:'none'}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 3px 12px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}} onMouseLeave={e=>{e.currentTarget.style.boxShadow='';e.currentTarget.style.transform=''}}>
+                <div style={{position:'relative',flexShrink:0,marginTop:'0.1rem'}} onClick={e=>e.stopPropagation()}>
+                  <input type="checkbox" checked={todoMenu===t.id} onChange={()=>setTodoMenu(todoMenu===t.id?null:t.id)} style={{width:'16px',height:'16px',cursor:'pointer',accentColor:'var(--accent)'}}/>
+                  {todoMenu===t.id&&(
+                    <div style={{position:'absolute',top:'100%',left:0,zIndex:99,background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'8px',boxShadow:'0 6px 20px rgba(0,0,0,0.12)',overflow:'hidden',minWidth:'130px',marginTop:'4px'}}>
+                      <button onClick={()=>{toggleTodo(t.id);setTodoMenu(null)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',fontFamily:'var(--font-body)',color:'#059669',fontWeight:600}} onMouseEnter={e=>e.currentTarget.style.background='#F0FDF4'} onMouseLeave={e=>e.currentTarget.style.background='none'}>✓ Afvinken</button>
+                      <button onClick={()=>{archiveTodo(t.id);setTodoMenu(null)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',fontFamily:'var(--font-body)',color:'var(--text-primary)'}} onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
+                      <button onClick={()=>{removeTodo(t.id);setTodoMenu(null)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',fontFamily:'var(--font-body)',color:'#DC2626'}} onMouseEnter={e=>e.currentTarget.style.background='#FEF2F2'} onMouseLeave={e=>e.currentTarget.style.background='none'}>🗑 Verwijder</button>
+                      <div style={{borderTop:'1px solid var(--border)'}}/>
+                      <button onClick={()=>setTodoMenu(null)} style={{display:'block',width:'100%',textAlign:'left',padding:'0.4rem 0.65rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.72rem',fontFamily:'var(--font-body)',color:'var(--text-secondary)'}} onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>✕ Deselecteer</button>
+                    </div>
+                  )}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                    {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.25rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
+                    <span style={{fontSize:'0.82rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</span>
+                  </div>
+                  {t.description&&<div style={{fontSize:'0.68rem',color:'var(--text-secondary)',marginTop:'0.1rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.description}</div>}
+                  <div style={{display:'flex',gap:'0.3rem',alignItems:'center',marginTop:'0.15rem'}}>
+                    <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{t.assignee||'Tein'}</span>
+                    <span style={{fontSize:'0.6rem',color:'var(--text-secondary)',marginLeft:'auto'}}>{new Date(t.createdAt).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}</span>
+                  </div>
+                  {t.dueDate&&<div style={{marginTop:'0.3rem',padding:'0.15rem 0.4rem',borderRadius:'5px',fontSize:'0.65rem',fontWeight:700,textAlign:'center',background:isOverdue?'#FEE2E2':isSoon?'#FEF3C7':'#EFF6FF',color:isOverdue?'#DC2626':isSoon?'#92400E':'#2563EB'}}>{isOverdue?`⚠️ ${Math.abs(dLeft)}d te laat`:dLeft===0?'📌 Vandaag':isSoon?`⏰ Over ${dLeft}d`:`📅 ${new Date(t.dueDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}`}</div>}
+                </div>
+              </div>
+            </div>
+          )})}
+          {doneTodos.length>0&&<button onClick={()=>saveTodos(stockTodos.filter(t=>!t.done||t.archived))} style={{fontSize:'0.68rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'10px',padding:'0.4rem 0.6rem',cursor:'pointer',alignSelf:'center'}}>🗑 {doneTodos.length} wissen</button>}
+          {archivedTodos.length>0&&<button onClick={()=>setEditTodo({_showArchive:true})} style={{fontSize:'0.68rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'10px',padding:'0.4rem 0.6rem',cursor:'pointer',alignSelf:'center'}}>📦 {archivedTodos.length} archief</button>}
+        </div>
+      </div>
+
+        {/* Edit modal */}
+        {editTodo&&!editTodo._showArchive&&(
+          <div className="modal-overlay" onClick={()=>setEditTodo(null)}>
+            <div className="modal" style={{maxWidth:'480px'}} onClick={e=>e.stopPropagation()}>
+              <div className="modal-header"><h3>Voorraad to-do</h3><button className="modal-close" onClick={()=>setEditTodo(null)}>✕</button></div>
+              <div className="form-group"><label className="form-label">Titel</label>
+                <input className="form-input" value={editTodo.title} onChange={e=>{const v=e.target.value;setEditTodo(p=>({...p,title:v}));updateTodo(editTodo.id,{title:v})}}/></div>
+              <div className="form-group"><label className="form-label">Beschrijving</label>
+                <textarea className="form-textarea" rows={2} value={editTodo.description||''} onChange={e=>{const v=e.target.value;setEditTodo(p=>({...p,description:v}));updateTodo(editTodo.id,{description:v})}} placeholder="Details, leverancier, link..."/></div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
+                <div className="form-group"><label className="form-label">Prioriteit</label>
+                  <button onClick={()=>{const v=editTodo.priority==='high'?'normal':'high';setEditTodo(p=>({...p,priority:v}));updateTodo(editTodo.id,{priority:v})}} style={{width:'100%',padding:'0.4rem',borderRadius:'6px',border:`1px solid ${editTodo.priority==='high'?'#DC2626':'var(--border)'}`,background:editTodo.priority==='high'?'#FEE2E2':'transparent',color:editTodo.priority==='high'?'#DC2626':'var(--text-secondary)',fontWeight:600,cursor:'pointer',fontSize:'0.8rem',fontFamily:'var(--font-body)'}}>{editTodo.priority==='high'?'🔴 Urgent':'○ Normaal'}</button></div>
+                <div className="form-group"><label className="form-label">Toewijzen</label>
+                  <select className="form-select" value={editTodo.assignee||'Tein'} onChange={e=>{const v=e.target.value;setEditTodo(p=>({...p,assignee:v}));updateTodo(editTodo.id,{assignee:v})}}>
+                    <option>Tein</option><option>Sam</option><option>Productie</option>
+                  </select></div>
+                <div className="form-group"><label className="form-label">Deadline</label>
+                  <input className="form-input" type="date" value={editTodo.dueDate||''} onChange={e=>{const v=e.target.value;setEditTodo(p=>({...p,dueDate:v}));updateTodo(editTodo.id,{dueDate:v})}}/></div>
+              </div>
+              <div style={{fontSize:'0.68rem',color:'var(--text-secondary)',margin:'0.5rem 0'}}>Aangemaakt: {new Date(editTodo.createdAt).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
+              <div style={{display:'flex',gap:'0.5rem',justifyContent:'space-between',marginTop:'0.75rem'}}>
+                <div style={{display:'flex',gap:'0.4rem'}}>
+                  <button onClick={()=>{removeTodo(editTodo.id);setEditTodo(null)}} style={{padding:'0.35rem 0.6rem',borderRadius:'6px',border:'1px solid #DC2626',background:'#FEF2F2',color:'#DC2626',fontSize:'0.72rem',fontWeight:600,cursor:'pointer'}}>🗑 Verwijder</button>
+                  <button onClick={()=>{archiveTodo(editTodo.id);setEditTodo(null)}} style={{padding:'0.35rem 0.6rem',borderRadius:'6px',border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text-secondary)',fontSize:'0.72rem',fontWeight:600,cursor:'pointer'}}>📦 Archiveer</button>
+                </div>
+                <button onClick={()=>setEditTodo(null)} className="btn btn-primary" style={{fontSize:'0.78rem'}}>Sluiten</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {editTodo&&editTodo._showArchive&&(
+          <div className="modal-overlay" onClick={()=>setEditTodo(null)}>
+            <div className="modal" style={{maxWidth:'400px'}} onClick={e=>e.stopPropagation()}>
+              <div className="modal-header"><h3>📦 Archief</h3><button className="modal-close" onClick={()=>setEditTodo(null)}>✕</button></div>
+              {archivedTodos.length===0?<p style={{color:'var(--text-secondary)',fontSize:'0.82rem'}}>Geen gearchiveerde items</p>:
+                archivedTodos.map(t=><div key={t.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.4rem 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{flex:1,fontSize:'0.8rem',color:'var(--text-secondary)'}}>{t.title}</span>
+                  <button onClick={()=>{updateTodo(t.id,{archived:false})}} style={{fontSize:'0.68rem',color:'var(--accent)',background:'none',border:'none',cursor:'pointer',fontWeight:600}}>Terugzetten</button>
+                </div>)}
+            </div>
+          </div>
+        )}
+      {/* BESTELLINGEN CARDS */}
+      <div style={{marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
+          <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>Bestellingen</span>
+          <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{activeOrders.length} actief</span>
+          <button onClick={()=>setShowAddOrder(!showAddOrder)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--accent)',fontWeight:600,marginLeft:'auto'}}>+ Bestelling</button>
+        </div>
+        {showAddOrder&&(
+          <div className="card" style={{padding:'0.75rem',marginBottom:'0.5rem'}}>
+            <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 2fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
+              <input className="form-input" value={orderForm.title} onChange={e=>setOrderForm({...orderForm,title:e.target.value})} placeholder="Wat besteld? (bijv. Dubbelzijdig tape)" style={{fontSize:'0.78rem'}}/>
+              <select className="form-select" value={orderForm.shop} onChange={e=>setOrderForm({...orderForm,shop:e.target.value})} style={{fontSize:'0.78rem'}}><option>Alibaba</option><option>AliExpress</option><option>Amazon</option><option>Bol.com</option><option>Action</option><option>Anders</option></select>
+              <input className="form-input" value={orderForm.link} onChange={e=>setOrderForm({...orderForm,link:e.target.value})} placeholder="Link naar bestelling..." style={{fontSize:'0.78rem'}}/>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
+              <input className="form-input" value={orderForm.quantity} onChange={e=>setOrderForm({...orderForm,quantity:e.target.value})} placeholder="Aantal" style={{fontSize:'0.78rem'}}/>
+              <input className="form-input" value={orderForm.price} onChange={e=>setOrderForm({...orderForm,price:e.target.value})} placeholder="Prijs (€/$)" style={{fontSize:'0.78rem'}}/>
+              <input className="form-input" type="date" value={orderForm.orderedAt} onChange={e=>setOrderForm({...orderForm,orderedAt:e.target.value})} title="Besteldatum" style={{fontSize:'0.78rem'}}/>
+              <input className="form-input" type="number" value={orderForm.transitDays} onChange={e=>setOrderForm({...orderForm,transitDays:e.target.value})} placeholder="Reisdagen" style={{fontSize:'0.78rem'}}/>
+            </div>
+            <div style={{display:'flex',gap:'0.4rem',justifyContent:'flex-end'}}>
+              <button onClick={()=>setShowAddOrder(false)} className="btn btn-sm btn-outline">Annuleren</button>
+              <button onClick={addOrder} className="btn btn-sm btn-primary">Toevoegen</button>
+            </div>
+          </div>
+        )}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'0.4rem'}}>
+          {activeOrders.map(o=>{
+            const dLeft = o.eta ? Math.ceil((new Date(o.eta)-new Date())/864e5) : null
+            const isLate = dLeft!==null && dLeft<0
+            const isSoon = dLeft!==null && dLeft>=0 && dLeft<=3
+            const barColor = isLate?'#DC2626':isSoon?'#D97706':'#2563EB'
+            return (
+              <div key={o.id} onClick={()=>setEditOrder(o)} style={{padding:'0.45rem 0.55rem',borderRadius:'8px',border:'1px solid var(--border)',background:'var(--bg-card)',cursor:'pointer',transition:'all 0.12s',borderTop:`3px solid ${barColor}`}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)';e.currentTarget.style.transform='translateY(-1px)'}} onMouseLeave={e=>{e.currentTarget.style.boxShadow='';e.currentTarget.style.transform=''}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.1rem'}}>
+                  <span style={{fontWeight:700,fontSize:'0.72rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{o.title}</span>
+                  <span style={{fontSize:'0.5rem',padding:'0.05rem 0.25rem',borderRadius:'99px',background:`${barColor}15`,color:barColor,fontWeight:700,flexShrink:0,marginLeft:'0.2rem'}}>{o.status||'onderweg'}</span>
+                </div>
+                <div style={{fontSize:'0.62rem',color:'var(--text-secondary)',marginBottom:'0.1rem'}}>{o.shop}{o.quantity?` · ${o.quantity}x`:''}{o.price?` · ${o.price}`:''}</div>
+                {o.orderedAt&&<div style={{fontSize:'0.58rem',color:'var(--text-secondary)'}}>Besteld {new Date(o.orderedAt).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}{o.transitDays?` · ${o.transitDays}d reis`:''}</div>}
+                {o.eta&&<div style={{marginTop:'0.15rem',fontSize:'0.6rem',fontWeight:700,padding:'0.1rem 0.3rem',borderRadius:'4px',textAlign:'center',background:isLate?'#FEE2E2':isSoon?'#FEF3C7':'#EFF6FF',color:barColor}}>{isLate?`⚠️ ${Math.abs(dLeft)}d laat`:dLeft===0?'📦 Vandaag!':isSoon?`⏰ ${dLeft}d`:`ETA ${new Date(o.eta).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})}`}</div>}
+                {o.link&&<a href={o.link} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} style={{fontSize:'0.55rem',color:'var(--accent)',marginTop:'0.1rem',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>🔗 Bekijk →</a>}
+              </div>
+            )
+          })}
+          {deliveredOrders.length>0&&<button onClick={()=>saveOrders(quickOrders.filter(o=>o.status!=='geleverd'))} style={{fontSize:'0.62rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'6px',padding:'0.25rem 0.5rem',cursor:'pointer'}}>✅ {deliveredOrders.length} wissen</button>}
+          {Array.from({length:Math.max(0,8-activeOrders.length)}).map((_,i)=>(
+            <div key={`empty-${i}`} onClick={()=>setShowAddOrder(true)} style={{padding:'0.45rem 0.55rem',borderRadius:'8px',border:'1px dashed var(--border)',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',minHeight:'65px',transition:'all 0.12s',opacity:0.35}}
+              onMouseEnter={e=>{e.currentTarget.style.opacity='0.7';e.currentTarget.style.borderColor='var(--accent)'}} onMouseLeave={e=>{e.currentTarget.style.opacity='0.35';e.currentTarget.style.borderColor='var(--border)'}}>
+              <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>+</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Order detail modal */}
+      {editOrder&&(
+        <div className="modal-overlay" onClick={()=>setEditOrder(null)}>
+          <div className="modal" style={{maxWidth:'480px'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header"><h3>📦 Bestelling</h3><button className="modal-close" onClick={()=>setEditOrder(null)}>✕</button></div>
+            <div className="form-group"><label className="form-label">Titel</label><input className="form-input" value={editOrder.title} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,title:v}));updateOrder(editOrder.id,{title:v})}}/></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Winkel</label><input className="form-input" value={editOrder.shop||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,shop:v}));updateOrder(editOrder.id,{shop:v})}}/></div>
+              <div className="form-group"><label className="form-label">Status</label><select className="form-select" value={editOrder.status||'onderweg'} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,status:v}));updateOrder(editOrder.id,{status:v})}}><option value="besteld">Besteld</option><option value="onderweg">Onderweg</option><option value="douane">Douane</option><option value="geleverd">Geleverd</option></select></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Aantal</label><input className="form-input" value={editOrder.quantity||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,quantity:v}));updateOrder(editOrder.id,{quantity:v})}}/></div>
+              <div className="form-group"><label className="form-label">Prijs</label><input className="form-input" value={editOrder.price||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,price:v}));updateOrder(editOrder.id,{price:v})}}/></div>
+              <div className="form-group"><label className="form-label">Reisdagen</label><input className="form-input" type="number" value={editOrder.transitDays||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,transitDays:v}));updateOrder(editOrder.id,{transitDays:v})}}/></div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+              <div className="form-group"><label className="form-label">Besteldatum</label><input className="form-input" type="date" value={editOrder.orderedAt||''} onChange={e=>{const v=e.target.value;const eta=v&&editOrder.transitDays?new Date(new Date(v).getTime()+parseInt(editOrder.transitDays)*864e5).toISOString().slice(0,10):'';setEditOrder(p=>({...p,orderedAt:v,eta}));updateOrder(editOrder.id,{orderedAt:v,eta})}}/></div>
+              <div className="form-group"><label className="form-label">ETA</label><input className="form-input" type="date" value={editOrder.eta||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,eta:v}));updateOrder(editOrder.id,{eta:v})}}/></div>
+            </div>
+            <div className="form-group"><label className="form-label">Link</label><input className="form-input" value={editOrder.link||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,link:v}));updateOrder(editOrder.id,{link:v})}} placeholder="https://alibaba.com/..."/></div>
+            <div className="form-group"><label className="form-label">Notities</label><textarea className="form-textarea" rows={2} value={editOrder.notes||''} onChange={e=>{const v=e.target.value;setEditOrder(p=>({...p,notes:v}));updateOrder(editOrder.id,{notes:v})}} placeholder="Extra info..."/></div>
+            <div style={{display:'flex',gap:'0.5rem',justifyContent:'space-between',marginTop:'0.75rem'}}>
+              <button onClick={()=>{removeOrder(editOrder.id);setEditOrder(null)}} style={{padding:'0.35rem 0.6rem',borderRadius:'6px',border:'1px solid #DC2626',background:'#FEF2F2',color:'#DC2626',fontSize:'0.72rem',fontWeight:600,cursor:'pointer'}}>🗑 Verwijder</button>
+              <div style={{display:'flex',gap:'0.4rem'}}>
+                <button onClick={()=>{updateOrder(editOrder.id,{status:'geleverd'});setEditOrder(null)}} style={{padding:'0.35rem 0.6rem',borderRadius:'6px',border:'1px solid #059669',background:'#F0FDF4',color:'#059669',fontSize:'0.72rem',fontWeight:600,cursor:'pointer'}}>✅ Geleverd</button>
+                <button onClick={()=>setEditOrder(null)} className="btn btn-primary" style={{fontSize:'0.78rem'}}>Sluiten</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{display:'flex',gap:'0.4rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>
         {SECTIONS.map(s => {
           const active = tab === s.key, st = sectionStats(s.key)
