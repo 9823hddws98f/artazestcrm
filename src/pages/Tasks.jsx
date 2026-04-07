@@ -1202,7 +1202,7 @@ export default function Tasks({ user }) {
       alert('Opslaan mislukt: ' + (err.message||err))
     }
   }
-  const resetForm=()=>setForm({title:'',category:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
+  const resetForm=()=>setForm({title:'',category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
   const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||'',estimatedHours:t.estimatedHours||0,energyLevel:t.energyLevel||'middel',recurring:t.recurring||'nooit',isMIT:t.isMIT||false});setEditing(t.id);setShowAdd(true)}
   const updateStatus=async(id,status)=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,status,completed:status==='klaar'});reload()}}
@@ -1283,11 +1283,6 @@ export default function Tasks({ user }) {
             resetForm()
             setEditing(null)
             setShowAdd(true)
-            // Pre-fill categorie als een project actief is — filter blijft actief
-            if(activeProject!=='alle') {
-              const matchCat = CATEGORIES.find(cat=>cat.toLowerCase()===activeProject.toLowerCase())
-              if(matchCat) setTimeout(()=>setForm(f=>({...f,category:matchCat})),0)
-            }
           }}>+ Nieuwe taak</button>
           </div>
         </div>
