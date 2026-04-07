@@ -1202,7 +1202,7 @@ export default function Tasks({ user }) {
       alert('Opslaan mislukt: ' + (err.message||err))
     }
   }
-  const resetForm=()=>setForm({title:'',category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})
+  const resetForm=()=>{const matchCat=activeProject!=='alle'?CATEGORIES.find(c=>c.toLowerCase()===activeProject.toLowerCase())||activeProject:'Overig';setForm({title:'',category:matchCat,assignee:user?.name||'Tein',status:'todo',priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false})}
   const del=async id=>{await api.remove('tasks',id);setConfirmDel(null);setEditing(null);setShowAdd(false);reload()}
   const startEdit=t=>{setForm({...t,tags:t.tags||[],subtasks:t.subtasks||[],plannedDate:t.plannedDate||'',estimatedHours:t.estimatedHours||0,energyLevel:t.energyLevel||'middel',recurring:t.recurring||'nooit',isMIT:t.isMIT||false});setEditing(t.id);setShowAdd(true)}
   const updateStatus=async(id,status)=>{const t=tasks.find(x=>x.id===id);if(t){await api.save('tasks',{...t,status,completed:status==='klaar'});reload()}}
@@ -1252,7 +1252,7 @@ export default function Tasks({ user }) {
   const removeSubtask=subId=>setForm({...form,subtasks:form.subtasks.filter(s=>s.id!==subId)})
 
   const active=tasks.filter(t=>!t.archived)
-  const filtered=active.filter(t=>(filterUser==='all'||t.assignee===filterUser)&&(activeProject==='alle'||t.category===activeProject)).sort((a,b)=>{
+  const filtered=active.filter(t=>(filterUser==='all'||t.assignee===filterUser)&&(activeProject==='alle'||t.category?.toLowerCase()===activeProject?.toLowerCase())).sort((a,b)=>{
     // 1. Binnen dezelfde kolom: gebruik handmatige sortOrder als die gezet is
     if(a.status===b.status && a.sortOrder!=null && b.sortOrder!=null) return a.sortOrder-b.sortOrder
     if(a.status===b.status && a.sortOrder!=null && b.sortOrder==null) return -1
