@@ -18,11 +18,15 @@ const fmt = d => new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month
 export default function Dashboard({ user }) {
   const [tasks, setTasks] = useState([])
   const [inventory, setInventory] = useState([])
+  const [orders, setOrders] = useState([])
+  const [healthChecks, setHealthChecks] = useState([])
   const [daysLeft, setDaysLeft] = useState(getDaysUntilLaunch())
 
   useEffect(() => {
     api.getAll('tasks').then(setTasks)
     api.getAll('inventory').then(setInventory)
+    api.getSetting('quick_orders').then(v => { if(v?.length) setOrders(v) })
+    api.getSetting('health_checks').then(v => { if(v?.length) setHealthChecks(v) })
     const t = setInterval(() => setDaysLeft(getDaysUntilLaunch()), 60000)
     return () => clearInterval(t)
   }, [])
@@ -46,6 +50,9 @@ export default function Dashboard({ user }) {
   const urgentOpen = openTasks.filter(t => t.priority === 'high')
 
   const needsOrder = inventory.filter(i => i.minStock > 0 && i.quantity < i.minStock)
+  const activeOrders = orders.filter(o => o.status !== 'geleverd')
+  const healthOk = healthChecks.filter(c => { const d=c.lastChecked?Math.floor((Date.now()-new Date(c.lastChecked).getTime())/864e5):Infinity; const max={daily:1,weekly:7,monthly:30}[c.freq]||7; return d<=max }).length
+  const healthScore = healthChecks.length>0?Math.round(healthOk/healthChecks.length*100):0
   const urgencyColor = daysLeft <= 3 ? '#DC2626' : daysLeft <= 7 ? '#D97706' : daysLeft <= 12 ? '#EA580C' : '#2563EB'
   const todayStr = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -225,6 +232,30 @@ export default function Dashboard({ user }) {
           <div className="card" style={{ flex: 0 }}>
             <h3 className="section-title" style={{ marginBottom: '0.75rem' }}>Kosten per artwork</h3>
             <CostCalcMini />
+          </div>
+
+          {/* Active Orders */}
+          {activeOrders.length>0&&<div className="card" style={{flex:0}}>
+            <div className="section-header"><h3 className="section-title">📦 Bestellingen</h3><Link to="/inventory" className="btn btn-sm btn-outline">→</Link></div>
+            {activeOrders.slice(0,4).map(o=>{
+              const dLeft=o.eta?Math.ceil((new Date(o.eta)-new Date())/864e5):null
+              return <div key={o.id} style={{padding:'0.4rem 0.6rem',borderRadius:'8px',border:'1px solid var(--border)',marginBottom:'0.3rem',borderLeft:`3px solid ${dLeft!==null&&dLeft<0?'#DC2626':dLeft!==null&&dLeft<=3?'#D97706':'#2563EB'}`}}>
+                <div style={{fontSize:'0.78rem',fontWeight:600}}>{o.title}</div>
+                <div style={{fontSize:'0.65rem',color:'var(--text-secondary)',display:'flex',justifyContent:'space-between'}}>
+                  <span>{o.shop}</span>
+                  <span style={{fontWeight:600,color:dLeft!==null&&dLeft<0?'#DC2626':dLeft!==null&&dLeft<=3?'#D97706':'var(--text-secondary)'}}>{dLeft!==null?(dLeft<0?`${Math.abs(dLeft)}d te laat`:`${dLeft}d`):'—'}</span>
+                </div>
+              </div>
+            })}
+          </div>}
+
+          {/* Health Score */}
+          <div className="card" style={{flex:0,textAlign:'center',padding:'1rem'}}>
+            <Link to="/maintenance" style={{textDecoration:'none',color:'inherit'}}>
+              <div style={{fontSize:'0.6rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-secondary)',marginBottom:'0.3rem'}}>Store Health</div>
+              <div style={{fontSize:'2.2rem',fontWeight:700,fontFamily:'var(--font-display)',color:healthScore>=80?'#059669':healthScore>=50?'#D97706':'#DC2626'}}>{healthScore}%</div>
+              <div style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{healthOk}/{healthChecks.length} checks ok</div>
+            </Link>
           </div>
         </div>
       </div>
