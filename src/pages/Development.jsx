@@ -66,6 +66,14 @@ export default function Development() {
 
   const filtered = filterStage ? items.filter(i=>i.stage===filterStage) : items
   const stageCounts = STAGES.map(s=>({...s,count:items.filter(i=>i.stage===s.key).length}))
+  const [dragId, setDragId] = useState(null)
+  const [dragOverId, setDragOverId] = useState(null)
+  const reorder = (fromId, toId) => {
+    if(fromId===toId) return
+    const reordered=[...items]; const fi=reordered.findIndex(x=>x.id===fromId); const[moved]=reordered.splice(fi,1)
+    const ti=reordered.findIndex(x=>x.id===toId); reordered.splice(ti,0,moved)
+    saveItems(reordered); setDragId(null); setDragOverId(null)
+  }
 
   return (
     <>
@@ -81,6 +89,9 @@ export default function Development() {
       <div style={{display:'flex',gap:'0.5rem',marginBottom:'1.25rem',flexWrap:'wrap'}}>
         {stageCounts.map(s=>(
           <button key={s.key} onClick={()=>setFilterStage(filterStage===s.key?null:s.key)}
+            onDragOver={e=>{e.preventDefault();e.currentTarget.style.transform='scale(1.05)'}}
+            onDragLeave={e=>{e.currentTarget.style.transform=''}}
+            onDrop={e=>{e.preventDefault();e.currentTarget.style.transform='';if(dragId){const t=items.find(x=>x.id===dragId);if(t){save({...t,stage:s.key});setDragId(null);setDragOverId(null)}}}}
             style={{padding:'0.4rem 0.75rem',borderRadius:'10px',border:`1.5px solid ${filterStage===s.key?s.color:'var(--border)'}`,background:filterStage===s.key?`${s.color}15`:'var(--bg-card)',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem',transition:'all 0.15s'}}>
             <span>{s.icon}</span>
             <span style={{fontSize:'0.78rem',fontWeight:600,color:filterStage===s.key?s.color:'var(--text-primary)'}}>{s.label}</span>
@@ -101,8 +112,14 @@ export default function Development() {
           {filtered.map(a=>{
             const stage=STAGES.find(s=>s.key===a.stage)||STAGES[0]
             return (
-              <div key={a.id} onClick={()=>setSelected(a)} style={{cursor:'pointer',borderRadius:'12px',overflow:'hidden',border:'1px solid var(--border)',background:'var(--bg-card)',transition:'all 0.15s'}}
-                onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'}} onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
+              <div key={a.id} draggable
+                onDragStart={e=>{setDragId(a.id);e.dataTransfer.effectAllowed='move'}}
+                onDragEnd={()=>{setDragId(null);setDragOverId(null)}}
+                onDragOver={e=>{e.preventDefault();setDragOverId(a.id)}}
+                onDrop={e=>{e.preventDefault();reorder(dragId,a.id)}}
+                onClick={()=>!dragId&&setSelected(a)}
+                style={{cursor:'grab',borderRadius:'12px',overflow:'hidden',border:dragOverId===a.id?'2px dashed var(--accent)':'1px solid var(--border)',background:'var(--bg-card)',transition:'all 0.15s',opacity:dragId===a.id?0.4:1}}
+                onMouseEnter={e=>{if(!dragId){e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'}}} onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
                 <div style={{aspectRatio:'1',background:a.thumbnail?`url(${a.thumbnail}) center/cover`:`linear-gradient(135deg,${stage.color}30,#F2F0EB)`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
                   {!a.thumbnail&&<span style={{fontSize:'0.85rem',color:'rgba(0,0,0,0.12)',fontStyle:'italic'}}>{a.name?.slice(0,14)}</span>}
                   <span style={{position:'absolute',top:'6px',left:'6px',fontSize:'0.6rem',padding:'0.1rem 0.4rem',borderRadius:'99px',background:stage.color,color:'#fff',fontWeight:700}}>{stage.icon} {stage.label}</span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../api'
 import { brandName, colorHex } from '../colors'
-const SECTIONS = [
+const DEFAULT_SECTIONS = [
   { key: 'panelen', label: 'Akoestische panelen' },
   { key: 'lijst', label: 'Houten lijst & knop' },
   { key: 'karton', label: 'Karton & verpakking' },
@@ -230,6 +230,9 @@ function PanelenRankingView({ items, usageLogs, onUpdateQty, onUpdateField, onRe
 export default function Inventory() {
   const [items, setItems] = useState([])
   const [tab, setTab] = useState('panelen')
+  const [SECTIONS, setSections] = useState(DEFAULT_SECTIONS)
+  const [showAddSection, setShowAddSection] = useState(false)
+  const [newSectionLabel, setNewSectionLabel] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [expanded, setExpanded] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -253,7 +256,11 @@ export default function Inventory() {
   useEffect(() => {
     api.getAll('inventory').then(setItems)
     api.getAll('panel_usage').then(setUsageLogs)
+    api.getSetting('inventory_sections').then(v => { if(v?.length) setSections(v) })
   }, [])
+  const saveSections = s => { setSections(s); api.saveSetting('inventory_sections', s) }
+  const addSection = () => { if(!newSectionLabel.trim()) return; const key=newSectionLabel.trim().toLowerCase().replace(/\s+/g,'-'); if(SECTIONS.find(s=>s.key===key)) return; saveSections([...SECTIONS,{key,label:newSectionLabel.trim()}]); setNewSectionLabel(''); setShowAddSection(false); setTab(key) }
+  const removeSection = key => { if(SECTIONS.length<=1) return; saveSections(SECTIONS.filter(s=>s.key!==key)); if(tab===key) setTab(SECTIONS[0].key) }
   const reloadUsage = () => api.getAll('panel_usage').then(setUsageLogs)
   const deleteUsage = async (logId, item) => {
     // Herstel de voorraad
@@ -296,6 +303,23 @@ export default function Inventory() {
     setForm({name:'',quantity:0,minStock:10,leadTimeDays:90,supplier:'',notes:''})
     setShowAdd(false); reload()
   }
+  const seedPanelen = async () => {
+    const existing = items.filter(i=>i.section==='panelen').map(i=>i.name.toLowerCase())
+    const arts = [
+      'Eclipse','Wave','Artwork 3','Artwork 4','Artwork 5','Maris','Eterna','Artwork 8','Artwork 9',
+      'Touch','Artwork 11','Artwork 12','Allerlij','Artwork 14','Artwork 15','Woman','Eclipse SE',
+      'Stone','Artwork 19','Artwork 20','Zephyr','Stone II','Wave II','Artwork 24','Artwork 25'
+    ]
+    const kleuren = {Eclipse:'Light tan/Black/White',Wave:'Blue/Black/White','Artwork 3':'Blue/Black/White','Artwork 4':'Blue/Black/White','Artwork 5':'Light tan/Black/Blue',Maris:'Light tan/Black/Blue',Eterna:'Blue/White','Artwork 8':'Beige/Black/White','Artwork 9':'Light tan/Black',Touch:'Blue/White/Beige','Artwork 11':'Beige/Black/White','Artwork 12':'Light tan/Black/White',Allerlij:'Blue/White/Light tan','Artwork 14':'Beige/Black/White','Artwork 15':'Beige/Black',Woman:'Blue/Black','Eclipse SE':'Beige/Black/White',Stone:'Light tan/Black','Artwork 19':'Blue/White','Artwork 20':'Beige/Black/White',Zephyr:'Beige/Black','Stone II':'Blue/White','Wave II':'Blue/Black','Artwork 24':'Black/White','Artwork 25':'Blue/Beige'}
+    let added=0
+    for(const name of arts){
+      if(existing.includes(name.toLowerCase())) continue
+      await api.save('inventory',{name,section:'panelen',quantity:0,minStock:5,leadTimeDays:14,supplier:'Eigen productie',notes:kleuren[name]||'',batches:[],startStock:0})
+      added++
+    }
+    reload()
+    if(added>0) alert(`${added} artworks toegevoegd!`)
+  }
   const updateField = async (item, field, value) => { await api.save('inventory', { ...item, [field]: value }); reload() }
   const updateQty = async (item, d) => { await api.save('inventory', { ...item, quantity: Math.max(0, item.quantity + d) }); reload() }
   const addBatch = async (item) => {
@@ -306,7 +330,7 @@ export default function Inventory() {
     setBatchForm({ qty: 0, date: '', note: '' }); setShowBatch(null); reload()
   }
   const del = async (id) => { await api.remove('inventory', id); setConfirmDel(null); reload() }
-  const current = items.filter(i => i.section === tab).sort((a, b) => a.quantity - b.quantity).sort((a, b) => a.quantity - b.quantity)
+  const current = items.filter(i => i.section === tab).sort((a, b) => (b.quantity||0) - (a.quantity||0))
   const needsOrder = items.filter(i => i.minStock > 0 && i.quantity < i.minStock).length
   const sectionBad = (key) => items.filter(i => i.section === key && i.minStock > 0 && i.quantity < i.minStock).length > 0
   const sectionStats = (key) => {
@@ -392,35 +416,25 @@ export default function Inventory() {
 
   return (
     <>
-      <div className="page-header" style={{alignItems:'flex-start'}}>
-        <div>
-          <h1>Voorraad</h1>
-          <p className="page-subtitle">{items.length} items
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'1.5rem',marginBottom:'1rem'}}>
+        <div style={{flexShrink:0}}>
+          <h1 style={{margin:0}}>Voorraad</h1>
+          <p className="page-subtitle" style={{margin:'0.2rem 0 0'}}>{items.length} items
             {needsOrder > 0 ? <span style={{color:'#DC2626'}}> &middot; {needsOrder} bestellen</span>
             : <span style={{color:'#059669'}}> &middot; alles op voorraad</span>}
           </p>
         </div>
-        <BestellingTracker
-          shipments={shipments}
-          onAdd={()=>{setShipForm(emptyShipment);setEditShipment(null);setShowAddShipment(true)}}
-          onEdit={startEditShipment}
-          onDelete={id=>setConfirmDelShipment(id)}
-        />
-      </div>
-
-      {/* Voorraad To-Do's */}
-      <div style={{marginBottom:'1.25rem'}}>
-        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
-          <span style={{fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>To-do's</span>
-          <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{openTodos.length}/{stockTodos.filter(t=>!t.archived).length}</span>
-          <button onClick={()=>setShowAddTodo(!showAddTodo)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--accent)',fontWeight:600,marginLeft:'auto'}}>+ Toevoegen</button>
-        </div>
-        {showAddTodo&&<div style={{display:'flex',gap:'0.35rem',marginBottom:'0.5rem'}}>
-          <input autoFocus value={todoInput} onChange={e=>setTodoInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTodo()} placeholder="Nieuwe voorraad to-do..." className="form-input" style={{flex:1,fontSize:'0.8rem',padding:'0.35rem 0.6rem'}}/>
-          <button onClick={addTodo} className="btn btn-sm btn-primary" style={{flexShrink:0}}>+</button>
-          <button onClick={()=>setShowAddTodo(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem'}}>✕</button>
-        </div>}
-        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.25rem'}}>
+            <span style={{fontSize:'0.58rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>To-do's</span>
+            <span style={{fontSize:'0.58rem',color:'var(--text-secondary)'}}>{openTodos.length}/{stockTodos.filter(t=>!t.archived).length}</span>
+            <button onClick={()=>setShowAddTodo(!showAddTodo)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.65rem',color:'var(--accent)',fontWeight:600,marginLeft:'auto'}}>+</button>
+          </div>
+          {showAddTodo&&<div style={{display:'flex',gap:'0.3rem',marginBottom:'0.3rem'}}>
+            <input autoFocus value={todoInput} onChange={e=>setTodoInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTodo()} placeholder="Nieuwe to-do..." className="form-input" style={{flex:1,fontSize:'0.75rem',padding:'0.2rem 0.5rem'}}/>
+            <button onClick={addTodo} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'4px',fontSize:'0.65rem',padding:'0.2rem 0.4rem',cursor:'pointer'}}>+</button>
+          </div>}
+          <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
           {openTodos.map(t=>{
             const dLeft = t.dueDate ? Math.ceil((new Date(t.dueDate)-new Date())/864e5) : null
             const isOverdue = dLeft!==null && dLeft<0
@@ -459,6 +473,7 @@ export default function Inventory() {
           )})}
           {doneTodos.length>0&&<button onClick={()=>saveTodos(stockTodos.filter(t=>!t.done||t.archived))} style={{fontSize:'0.68rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'10px',padding:'0.4rem 0.6rem',cursor:'pointer',alignSelf:'center'}}>🗑 {doneTodos.length} wissen</button>}
           {archivedTodos.length>0&&<button onClick={()=>setEditTodo({_showArchive:true})} style={{fontSize:'0.68rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'10px',padding:'0.4rem 0.6rem',cursor:'pointer',alignSelf:'center'}}>📦 {archivedTodos.length} archief</button>}
+        </div>
         </div>
       </div>
 
@@ -512,25 +527,19 @@ export default function Inventory() {
           <button onClick={()=>setShowAddOrder(!showAddOrder)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.7rem',color:'var(--accent)',fontWeight:600,marginLeft:'auto'}}>+ Bestelling</button>
         </div>
         {showAddOrder&&(
-          <div className="card" style={{padding:'0.75rem',marginBottom:'0.5rem'}}>
-            <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 2fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
-              <input className="form-input" value={orderForm.title} onChange={e=>setOrderForm({...orderForm,title:e.target.value})} placeholder="Wat besteld? (bijv. Dubbelzijdig tape)" style={{fontSize:'0.78rem'}}/>
-              <select className="form-select" value={orderForm.shop} onChange={e=>setOrderForm({...orderForm,shop:e.target.value})} style={{fontSize:'0.78rem'}}><option>Alibaba</option><option>AliExpress</option><option>Amazon</option><option>Bol.com</option><option>Action</option><option>Anders</option></select>
-              <input className="form-input" value={orderForm.link} onChange={e=>setOrderForm({...orderForm,link:e.target.value})} placeholder="Link naar bestelling..." style={{fontSize:'0.78rem'}}/>
+            <div style={{display:'flex',gap:'0.35rem',marginBottom:'0.35rem',flexWrap:'wrap'}}>
+              <input className="form-input" value={orderForm.title} onChange={e=>setOrderForm({...orderForm,title:e.target.value})} placeholder="Wat besteld?" style={{fontSize:'0.75rem',padding:'0.25rem 0.5rem',flex:'2 1 120px',minWidth:0}}/>
+              <select className="form-select" value={orderForm.shop} onChange={e=>setOrderForm({...orderForm,shop:e.target.value})} style={{fontSize:'0.75rem',padding:'0.25rem',flex:'0 1 90px'}}><option>Alibaba</option><option>AliExpress</option><option>Amazon</option><option>Bol.com</option><option>Action</option><option>Anders</option></select>
+              <input className="form-input" value={orderForm.quantity} onChange={e=>setOrderForm({...orderForm,quantity:e.target.value})} placeholder="Aantal" style={{fontSize:'0.75rem',padding:'0.25rem 0.5rem',flex:'0 1 60px',minWidth:0}}/>
+              <input className="form-input" value={orderForm.price} onChange={e=>setOrderForm({...orderForm,price:e.target.value})} placeholder="Prijs" style={{fontSize:'0.75rem',padding:'0.25rem 0.5rem',flex:'0 1 60px',minWidth:0}}/>
+              <input className="form-input" type="date" value={orderForm.orderedAt} onChange={e=>setOrderForm({...orderForm,orderedAt:e.target.value})} style={{fontSize:'0.75rem',padding:'0.25rem',flex:'0 1 110px'}}/>
+              <input className="form-input" type="number" value={orderForm.transitDays} onChange={e=>setOrderForm({...orderForm,transitDays:e.target.value})} placeholder="Dagen" style={{fontSize:'0.75rem',padding:'0.25rem 0.5rem',flex:'0 1 55px',minWidth:0}}/>
+              <input className="form-input" value={orderForm.link} onChange={e=>setOrderForm({...orderForm,link:e.target.value})} placeholder="Link..." style={{fontSize:'0.75rem',padding:'0.25rem 0.5rem',flex:'1 1 100px',minWidth:0}}/>
+              <button onClick={addOrder} className="btn btn-sm btn-primary" style={{fontSize:'0.72rem',padding:'0.25rem 0.5rem',flexShrink:0}}>+</button>
+              <button onClick={()=>setShowAddOrder(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.75rem',flexShrink:0}}>✕</button>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
-              <input className="form-input" value={orderForm.quantity} onChange={e=>setOrderForm({...orderForm,quantity:e.target.value})} placeholder="Aantal" style={{fontSize:'0.78rem'}}/>
-              <input className="form-input" value={orderForm.price} onChange={e=>setOrderForm({...orderForm,price:e.target.value})} placeholder="Prijs (€/$)" style={{fontSize:'0.78rem'}}/>
-              <input className="form-input" type="date" value={orderForm.orderedAt} onChange={e=>setOrderForm({...orderForm,orderedAt:e.target.value})} title="Besteldatum" style={{fontSize:'0.78rem'}}/>
-              <input className="form-input" type="number" value={orderForm.transitDays} onChange={e=>setOrderForm({...orderForm,transitDays:e.target.value})} placeholder="Reisdagen" style={{fontSize:'0.78rem'}}/>
-            </div>
-            <div style={{display:'flex',gap:'0.4rem',justifyContent:'flex-end'}}>
-              <button onClick={()=>setShowAddOrder(false)} className="btn btn-sm btn-outline">Annuleren</button>
-              <button onClick={addOrder} className="btn btn-sm btn-primary">Toevoegen</button>
-            </div>
-          </div>
         )}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'0.4rem'}}>
+        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
           {activeOrders.map(o=>{
             const dLeft = o.eta ? Math.ceil((new Date(o.eta)-new Date())/864e5) : null
             const isLate = dLeft!==null && dLeft<0
@@ -551,6 +560,12 @@ export default function Inventory() {
             )
           })}
           {deliveredOrders.length>0&&<button onClick={()=>saveOrders(quickOrders.filter(o=>o.status!=='geleverd'))} style={{fontSize:'0.62rem',color:'var(--text-secondary)',background:'none',border:'1px dashed var(--border)',borderRadius:'6px',padding:'0.25rem 0.5rem',cursor:'pointer'}}>✅ {deliveredOrders.length} wissen</button>}
+          {Array.from({length:Math.max(0,5-activeOrders.length)}).map((_,i)=>(
+            <div key={`empty-${i}`} onClick={()=>setShowAddOrder(true)} style={{minWidth:'180px',maxWidth:'280px',height:'90px',borderRadius:'12px',border:'2px dashed var(--border)',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.background='var(--accent-light)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='transparent'}}>
+              <span style={{color:'var(--text-secondary)',fontSize:'1.2rem'}}>+</span>
+            </div>
+          ))}
           {Array.from({length:Math.max(0,8-activeOrders.length)}).map((_,i)=>(
             <div key={`empty-${i}`} onClick={()=>setShowAddOrder(true)} style={{padding:'0.45rem 0.55rem',borderRadius:'8px',border:'1px dashed var(--border)',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',minHeight:'65px',transition:'all 0.12s',opacity:0.35}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='0.7';e.currentTarget.style.borderColor='var(--accent)'}} onMouseLeave={e=>{e.currentTarget.style.opacity='0.35';e.currentTarget.style.borderColor='var(--border)'}}>
@@ -596,20 +611,32 @@ export default function Inventory() {
         {SECTIONS.map(s => {
           const active = tab === s.key, st = sectionStats(s.key)
           return (
-            <button key={s.key} onClick={() => setTab(s.key)} style={{
-              padding:'0.5rem 1rem',borderRadius:'12px',border:'none',cursor:'pointer',
-              fontFamily:'var(--font-body)',transition:'all 0.15s',textAlign:'left',
-              background:active?'#1C1917':'#F2F0EB',color:active?'#fff':'#1C1917',
-              position:'relative',minWidth:'120px',
-            }}>
-              <div style={{fontSize:'0.82rem',fontWeight:active?600:500}}>{s.label}</div>
-              {st.count > 0 && <div style={{fontSize:'0.7rem',marginTop:'2px',color:active?'rgba(255,255,255,0.7)':'#78716C'}}>
-                {st.total} stuks{st.bad > 0 && <span style={{color:active?'#fca5a5':'#DC2626',fontWeight:600}}> &middot; {st.bad} bestellen</span>}
-              </div>}
-              {st.bad > 0 && <span style={{position:'absolute',top:'-2px',right:'-2px',width:'8px',height:'8px',borderRadius:'50%',background:'#DC2626',border:'2px solid #FAFAF7'}}/>}
-            </button>
+            <div key={s.key} style={{position:'relative'}}>
+              <button onClick={() => setTab(s.key)} style={{
+                padding:'0.5rem 1rem',borderRadius:'12px',border:'none',cursor:'pointer',
+                fontFamily:'var(--font-body)',transition:'all 0.15s',textAlign:'left',
+                background:active?'#1C1917':'#F2F0EB',color:active?'#fff':'#1C1917',
+                minWidth:'120px',
+              }}>
+                <div style={{fontSize:'0.82rem',fontWeight:active?600:500}}>{s.label}</div>
+                {st.count > 0 && <div style={{fontSize:'0.7rem',marginTop:'2px',color:active?'rgba(255,255,255,0.7)':'#78716C'}}>
+                  {st.total} stuks{st.bad > 0 && <span style={{color:active?'#fca5a5':'#DC2626',fontWeight:600}}> &middot; {st.bad} bestellen</span>}
+                </div>}
+                {st.bad > 0 && <span style={{position:'absolute',top:'-2px',right:'-2px',width:'8px',height:'8px',borderRadius:'50%',background:'#DC2626',border:'2px solid #FAFAF7'}}/>}
+              </button>
+            </div>
           )
         })}
+        {!showAddSection ? (
+          <button onClick={()=>setShowAddSection(true)} style={{padding:'0.5rem 0.75rem',borderRadius:'12px',border:'2px dashed var(--border)',background:'transparent',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.82rem',minWidth:'50px',transition:'all 0.15s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.color='var(--accent)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--text-secondary)'}}>+</button>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.35rem 0.6rem',borderRadius:'12px',border:'2px solid var(--accent)',background:'var(--accent-light)'}}>
+            <input autoFocus value={newSectionLabel} onChange={e=>setNewSectionLabel(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')addSection();if(e.key==='Escape')setShowAddSection(false)}} placeholder="Naam..." style={{border:'none',background:'transparent',fontSize:'0.82rem',fontWeight:600,outline:'none',width:'100px',fontFamily:'var(--font-body)'}}/>
+            <button onClick={addSection} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:'6px',fontSize:'0.7rem',padding:'0.2rem 0.4rem',cursor:'pointer'}}>+</button>
+            <button onClick={()=>setShowAddSection(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem'}}>✕</button>
+          </div>
+        )}
       </div>
       {tab === 'panelen' && (
         <PanelenRankingView
@@ -627,6 +654,7 @@ export default function Inventory() {
       <div className="card" style={{padding:0}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'1rem 1.25rem',borderBottom:'1px solid rgba(28,25,23,0.08)'}}>
           <h3 style={{margin:0,fontSize:'1.1rem'}}>{SECTIONS.find(s=>s.key===tab)?.label}</h3>
+          {tab==='panelen'&&items.filter(i=>i.section==='panelen').length<25&&<button className="btn btn-sm btn-outline" onClick={seedPanelen}>🔄 Laad 25 artworks</button>}
           <button className="btn btn-sm btn-primary" onClick={()=>setShowAdd(true)}>+ Toevoegen</button>
         </div>
         {current.length === 0 ? (

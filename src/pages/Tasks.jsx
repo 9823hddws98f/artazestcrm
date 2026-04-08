@@ -225,15 +225,17 @@ function HiringTracker() {
 
 // ─── PLATFORM CHECK-INS ─────────────────────────────────────────────────────
 function PlatformCheckins() {
-  const today = new Date().toISOString().slice(0,10)
+  // Today = reset om 1:00 's nachts lokale tijd
+  const getToday = () => { const d=new Date(); if(d.getHours()<1) d.setDate(d.getDate()-1); return d.toISOString().slice(0,10) }
+  const [today, setToday] = useState(getToday)
   const load = () => { try { return JSON.parse(localStorage.getItem('artazest_platforms') || '[]') } catch { return [] } }
   const save = items => { localStorage.setItem('artazest_platforms', JSON.stringify(items)); api.saveSetting('platform_checkins', items) }
   const DEFAULT = [
-    {id:'pl-1',name:'Upwork',icon:'💼',checked:null},
-    {id:'pl-2',name:'Shopify',icon:'🛒',checked:null},
-    {id:'pl-3',name:'Email',icon:'📧',checked:null},
-    {id:'pl-4',name:'Alibaba',icon:'📦',checked:null},
-    {id:'pl-5',name:'Instagram',icon:'📸',checked:null},
+    {id:'pl-1',name:'Upwork',icon:'💼',checked:null,url:'https://www.upwork.com/messages'},
+    {id:'pl-2',name:'Shopify',icon:'🛒',checked:null,url:'https://kfnqpb-ra.myshopify.com/admin'},
+    {id:'pl-3',name:'Email',icon:'📧',checked:null,url:'https://mail.google.com'},
+    {id:'pl-4',name:'Alibaba',icon:'📦',checked:null,url:'https://message.alibaba.com'},
+    {id:'pl-5',name:'Instagram',icon:'📸',checked:null,url:'https://www.instagram.com/direct/inbox/'},
   ]
   const ICONS = ['💼','🛒','📧','📦','📸','💬','🎨','📊','🔧','🌐','💳','📱','🎯','📋','🏪','🖥','💰','🔔']
   const [items, setItems] = useState(load)
@@ -245,6 +247,8 @@ function PlatformCheckins() {
   const [showIcons, setShowIcons] = useState(null)
 
   useEffect(()=>{ api.getSetting('platform_checkins').then(v=>{ if(v?.length) setItems(v); else { save(DEFAULT); setItems(DEFAULT) } }) },[])
+  // Reset om 1:00 's nachts
+  useEffect(()=>{ const iv=setInterval(()=>{ const n=getToday(); if(n!==today) setToday(n) },30000); return ()=>clearInterval(iv) },[today])
 
   const isChecked = item => item.checked === today
   const toggle = id => { const u=items.map(i=>i.id===id?{...i,checked:isChecked(i)?null:today}:i); save(u); setItems(u) }
@@ -288,6 +292,8 @@ function PlatformCheckins() {
                   style={{fontSize:'0.72rem',fontWeight:600,color:done?'#059669':'var(--text-primary)',flex:1,textDecoration:done?'line-through':'none',cursor:'pointer'}} title="Dubbelklik om naam te wijzigen">{item.name}</span>
               )}
               {done&&<span style={{color:'#059669',fontSize:'0.6rem',flexShrink:0}}>✓</span>}
+              {item.url&&<a href={item.url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} style={{color:'var(--accent)',fontSize:'0.55rem',flexShrink:0,padding:'0.1rem',borderRadius:'3px',textDecoration:'none'}}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--accent-light)'} onMouseLeave={e=>e.currentTarget.style.background='none'} title={`Open ${item.name}`}>→</a>}
               <button onClick={e=>{e.stopPropagation();setEditId(item.id);setEditName(item.name)}} style={{background:'none',border:'none',cursor:'pointer',color:'#9CA3AF',fontSize:'0.55rem',flexShrink:0,padding:'0.1rem',borderRadius:'3px'}}
                 onMouseEnter={e=>{e.currentTarget.style.color='var(--accent)';e.currentTarget.style.background='var(--accent-light)'}} onMouseLeave={e=>{e.currentTarget.style.color='#9CA3AF';e.currentTarget.style.background='none'}} title="Naam wijzigen">✎</button>
               <button onClick={e=>{e.stopPropagation();if(confirm(`${item.name} verwijderen?`))remove(item.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#D1D5DB',fontSize:'0.65rem',flexShrink:0,padding:'0.1rem',borderRadius:'3px'}}
@@ -382,12 +388,16 @@ function DesignersTracker() {
 }
 
 function DagelijkseCheckinsCompact() {
-  const today = new Date().toISOString().slice(0,10)
+  // Today = reset om 1:00 's nachts lokale tijd
+  const getToday = () => { const d=new Date(); if(d.getHours()<1) d.setDate(d.getDate()-1); return d.toISOString().slice(0,10) }
+  const [today, setToday] = useState(getToday)
   const load = () => { try { return JSON.parse(localStorage.getItem('artazest_checkins') || '[]') } catch { return [] } }
   const save = items => { localStorage.setItem('artazest_checkins', JSON.stringify(items)); api.saveSetting('checkins', items) }
   const [items, setItems] = useState(load)
 
   useEffect(() => { api.getSetting('checkins').then(val => { if (val && val.length > 0) setItems(val) }) }, [])
+  // Reset om 1:00 's nachts
+  useEffect(() => { const iv = setInterval(() => { const now = getToday(); if(now !== today) setToday(now) }, 30000); return () => clearInterval(iv) }, [today])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({name:'', via:'WhatsApp', topic:''})
   const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
@@ -851,7 +861,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
   )
 }
 
-function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,onDelete,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn,isSelected,onToggleSelect}) {
+function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArchive,onDelete,onPin,compact,draggable:isDraggable,onDragStart,onDragEnd,showArchiveBtn,isSelected,onToggleSelect}) {
   const [menuOpen,setMenuOpen]=useState(false)
   const days = daysUntil(t.dueDate)
   const overdue = days!==null&&days<0&&t.status!=='klaar'
@@ -879,22 +889,30 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
         {/* Kaart zelf */}
         <div
           onClick={onClick}
-          style={{flex:1,minWidth:0,padding:'0.38rem 0.55rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'pointer',background:isSelected?'#EFF6FF':'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,transition:'all 0.1s'}}
-          onMouseEnter={e=>e.currentTarget.style.boxShadow='0 1px 6px rgba(0,0,0,0.08)'}
+          style={{flex:1,minWidth:0,padding:'0.45rem 0.6rem',borderRadius:'8px',border:'1px solid var(--border)',cursor:'pointer',background:isSelected?'#EFF6FF':'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,transition:'all 0.1s'}}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
           onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
-          <div style={{fontWeight:500,fontSize:'0.79rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
-          <div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.12rem'}}>
-            <span style={{fontSize:'0.62rem',color:'var(--text-secondary)',flexShrink:0}}>{t.assignee}</span>
-            {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.02rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>!</span>}
-            {t.dueDate&&<span style={{fontSize:'0.58rem',fontWeight:600,padding:'0.02rem 0.26rem',borderRadius:'3px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'transparent',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)',whiteSpace:'nowrap'}}>{overdue?`${Math.abs(days)}d te laat`:isToday2?'Vandaag':soon?`${days}d`:fmt(t.dueDate)}</span>}
-            {subPct!==null&&<span style={{fontSize:'0.58rem',color:subPct===100?'#059669':'var(--text-secondary)',marginLeft:'auto',flexShrink:0}}>{subDone}/{subs.length}</span>}
+          {/* Row 1: Title */}
+          <div style={{fontWeight:600,fontSize:'0.82rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3,color:'var(--text-primary)'}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
+          {/* Row 2: Assignee + Category + Tags */}
+          <div style={{display:'flex',alignItems:'center',gap:'0.25rem',marginTop:'0.2rem',flexWrap:'wrap'}}>
+            <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{t.assignee}</span>
+            {t.category&&t.category!=='Overig'&&<span style={{fontSize:'0.55rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#F2F0EB',color:'#78716C',fontWeight:500}}>{t.category}</span>}
+            {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.05rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>urgent</span>}
           </div>
-          {subPct!==null&&subPct>0&&<div style={{marginTop:'0.2rem',height:'2px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div>}
+          {/* Row 3: Date + Subtasks */}
+          {(t.dueDate||subPct!==null)&&<div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.2rem'}}>
+            {t.dueDate&&<span style={{fontSize:'0.6rem',fontWeight:600,padding:'0.05rem 0.3rem',borderRadius:'4px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'var(--bg-secondary)',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)'}}>{overdue?`⚠ ${Math.abs(days)}d te laat`:isToday2?'📅 Vandaag':soon?`⏰ ${days}d`:fmt(t.dueDate)}</span>}
+            {subPct!==null&&<div style={{display:'flex',alignItems:'center',gap:'0.2rem',marginLeft:'auto'}}><div style={{width:'30px',height:'3px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${subPct}%`,background:subPct===100?'#059669':'var(--accent)',borderRadius:'99px'}}/></div><span style={{fontSize:'0.55rem',color:subPct===100?'#059669':'var(--text-secondary)'}}>{subDone}/{subs.length}</span></div>}
+          </div>}
+          {/* Menu */}
           {showArchiveBtn&&onArchive&&(
             <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem',position:'relative'}} onClick={e=>e.stopPropagation()}>
               <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.05rem 0.3rem',lineHeight:1,borderRadius:'4px'}}
                 onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
               {menuOpen&&<div style={{position:'absolute',right:0,bottom:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
+                {onPin&&<button onClick={()=>{onPin();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>{t.isSticky?'📌 Losmaken':'📌 Pinnen'}</button>}
                 <button onClick={()=>{onArchive();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
                   onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>e.currentTarget.style.background='none'}>📦 Archiveer</button>
                 {onDelete&&<button onClick={()=>{onDelete();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'#DC2626',fontFamily:'var(--font-body)'}}
@@ -948,7 +966,7 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
   )
 }
 
-function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder,selected,onToggleSelect,onQuickAdd}) {
+function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEnd,onCardClick,onStatusChange,onSubtaskToggle,onArchive,draggedId,onAddTask,onReorder,selected,onToggleSelect,onQuickAdd,onPin}) {
   // Gebruik ref voor draggedId om stale closure te voorkomen
   const draggedIdRef = React.useRef(null)
   React.useEffect(()=>{ draggedIdRef.current = draggedId },[draggedId])
@@ -1013,16 +1031,7 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
         }}
         style={{flex:1,minHeight:'120px',borderRadius:'var(--radius-md)',padding:'0.25rem',background:dropIdx!==null?'rgba(37,99,235,0.03)':'transparent',border:dropIdx!==null?'2px dashed #2563EB20':'2px solid transparent',transition:'all 0.1s'}}>
 
-        {tasks.length === 0 && dropIdx === null && (
-          <div style={{textAlign:'center',padding:'1.5rem 0.5rem'}}>
-            <button onClick={onAddTask}
-              style={{background:'none',border:'1px dashed var(--border)',borderRadius:'8px',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.73rem',padding:'0.5rem 1rem',width:'100%'}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
-              onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
-              + Taak toevoegen
-            </button>
-          </div>
-        )}
+
 
         {tasks.map((t, i) => (
           <div key={t.id}>
@@ -1040,6 +1049,7 @@ function KanbanColumn({status,tasks,statuses,onDrop,onCardDragStart,onCardDragEn
                 onStatusChange={s=>onStatusChange(t.id,s)}
                 onSubtaskToggle={subId=>onSubtaskToggle(t.id,subId)}
                 onArchive={()=>onArchive(t.id)}
+                onPin={onPin?()=>onPin(t.id):null}
               />
             </div>
           </div>
@@ -1292,6 +1302,8 @@ export default function Tasks({ user }) {
     return DEFAULT_STATUSES
   })
   const [showPhaseEdit,setShowPhaseEdit]=useState(false)
+  const [dragPhase,setDragPhase]=useState(null)
+  const [dragOverPhase,setDragOverPhase]=useState(null)
   const [newPhase,setNewPhase]=useState('')
   const [timelineOpen,setTimelineOpen]=useState(false)
   const [activeProject,setActiveProject]=useState('alle')
@@ -1457,10 +1469,8 @@ export default function Tasks({ user }) {
       <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit} onTaskUpdate={updateTaskDates}/>
 
       {/* Signal & Sticky lane */}
-      <div style={{marginBottom:'0.5rem',padding:'0.4rem 0.6rem',borderRadius:'10px',background:'linear-gradient(90deg,#FEF3C720,#DBEAFE20)',border:'1px solid var(--border)',minHeight:'42px'}}
-        onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C740,#DBEAFE40)'}}
-        onDragLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C720,#DBEAFE20)'}}
-        onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='linear-gradient(90deg,#FEF3C720,#DBEAFE20)';const id=_DRAG_ID||e.dataTransfer.getData('text/plain')||draggedId;if(id){const t=tasks.find(x=>x.id===id);if(t&&!t.isSticky&&active.filter(x=>x.isSticky).length<8){api.save('tasks',{...t,isSticky:true});_DRAG_ID=null;setDraggedId(null);reload()}}}}>
+      {active.filter(t=>t.isSticky).length>0&&(
+      <div style={{marginBottom:'0.5rem',padding:'0.4rem 0.6rem',borderRadius:'10px',background:'linear-gradient(90deg,#FEF3C720,#DBEAFE20)',border:'1px solid var(--border)'}}>
         <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.25rem'}}>
           <span style={{fontSize:'0.58rem',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text-secondary)'}}>📌 Signal & Sticky</span>
           <span style={{fontSize:'0.55rem',color:'var(--text-secondary)'}}>{active.filter(t=>t.isSticky).length}/8</span>
@@ -1471,9 +1481,9 @@ export default function Tasks({ user }) {
             const days=t.dueDate?Math.ceil((new Date(t.dueDate)-new Date())/864e5):null
             const overdue=days!==null&&days<0
             return (
-              <div key={t.id} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDraggedId(t.id)}} onDragEnd={()=>setDraggedId(null)}
+              <div key={t.id}
                 onClick={()=>startEdit(t)}
-                style={{flexShrink:0,padding:'0.3rem 0.6rem',borderRadius:'8px',border:`1px solid ${overdue?'#FECACA':st.color+'40'}`,background:'var(--bg-card)',cursor:'grab',display:'flex',alignItems:'center',gap:'0.35rem',maxWidth:'200px',transition:'all 0.12s'}}
+                style={{flexShrink:0,padding:'0.3rem 0.6rem',borderRadius:'8px',border:`1px solid ${overdue?'#FECACA':st.color+'40'}`,background:'var(--bg-card)',cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem',maxWidth:'200px',transition:'all 0.12s'}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'} onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
                 <span style={{width:'6px',height:'6px',borderRadius:'50%',background:st.color,flexShrink:0}}/>
                 <span style={{fontSize:'0.72rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</span>
@@ -1484,9 +1494,9 @@ export default function Tasks({ user }) {
               </div>
             )
           })}
-          {active.filter(t=>t.isSticky).length===0&&<span style={{fontSize:'0.68rem',color:'var(--text-secondary)',fontStyle:'italic',padding:'0.1rem 0'}}>Sleep taken hierheen om ze te pinnen (max 8)</span>}
         </div>
       </div>
+      )}
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
         <div className="tabs" style={{marginBottom:0,borderBottom:'none'}}>{views.map(v=><button key={v.key} className={`tab ${view===v.key?'active':''}`} onClick={()=>setView(v.key)}>{v.label}</button>)}</div>
@@ -1566,7 +1576,11 @@ export default function Tasks({ user }) {
 
       {showPhaseEdit&&(<div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem'}}>
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.75rem'}}><span style={{fontSize:'0.8rem',fontWeight:600}}>Fases beheren</span><span style={{fontSize:'0.7rem',color:'var(--text-secondary)'}}>min. 2 fases</span></div>
-        <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.75rem'}}>{statuses.map(s=>(<div key={s.key} style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.3rem 0.6rem',borderRadius:'99px',border:'1px solid var(--border)',fontSize:'0.8rem'}}><span style={{width:'8px',height:'8px',borderRadius:'50%',background:s.color}}/><span style={{fontWeight:500}}>{s.label}</span>{statuses.length>2&&<button onClick={()=>removePhase(s.key)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',marginLeft:'0.15rem'}}>x</button>}</div>))}</div>
+        <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.75rem'}}>{statuses.map((s,i)=>(<div key={s.key} draggable
+          onDragStart={()=>setDragPhase(i)} onDragEnd={()=>{setDragPhase(null);setDragOverPhase(null)}}
+          onDragOver={e=>{e.preventDefault();setDragOverPhase(i)}}
+          onDrop={e=>{e.preventDefault();if(dragPhase!==null&&dragPhase!==i){const r=[...statuses];const[m]=r.splice(dragPhase,1);r.splice(i,0,m);saveStatuses(r)};setDragPhase(null);setDragOverPhase(null)}}
+          style={{display:'flex',alignItems:'center',gap:'0.3rem',padding:'0.3rem 0.6rem',borderRadius:'99px',border:dragOverPhase===i?'2px dashed var(--accent)':'1px solid var(--border)',fontSize:'0.8rem',cursor:'grab',opacity:dragPhase===i?0.4:1,transition:'all 0.12s',background:dragOverPhase===i?'var(--accent-light)':'var(--bg-card)'}}><span style={{width:'8px',height:'8px',borderRadius:'50%',background:s.color}}/><span style={{fontWeight:500}}>{s.label}</span>{statuses.length>2&&<button onClick={()=>removePhase(s.key)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',marginLeft:'0.15rem'}}>x</button>}</div>))}</div>
         <div style={{display:'flex',gap:'0.35rem'}}><input className="form-input" value={newPhase} onChange={e=>setNewPhase(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addPhase()} placeholder="Nieuwe fase..." style={{maxWidth:'180px',padding:'0.3rem 0.6rem',fontSize:'0.8rem'}}/><button className="btn btn-sm btn-outline" onClick={addPhase}>+</button></div>
       </div>)}
 
@@ -1575,7 +1589,7 @@ export default function Tasks({ user }) {
         <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
           {view==='kanban'?(
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);_DRAG_ID=null}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)} selected={selected} onToggleSelect={toggleSelect} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:st.key,priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}}/>))}
+              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);setTimeout(()=>{_DRAG_ID=null},100)}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)} selected={selected} onToggleSelect={toggleSelect} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:st.key,priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}} onPin={id=>{const t=tasks.find(x=>x.id===id);if(t){if(t.isSticky){api.save('tasks',{...t,isSticky:false});reload()}else if(active.filter(x=>x.isSticky).length<8){api.save('tasks',{...t,isSticky:true});reload()}}}}/>))}
             </div>
           ):view==='archief'?(
             view==='kalender' ? <KalenderView tasks={filtered} onTaskClick={startEdit} onAddTask={(date)=>{resetForm();setForm(f=>({...f,dueDate:date}));setShowAdd(true)}}/> :

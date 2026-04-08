@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
+import HealthMonitor from './HealthMonitor'
 
 const MACHINES = ['CNC Frees','Pers','Snijmachine','Printer','Verpakkingsmachine']
 const INTERVALS = ['Dagelijks','Wekelijks','Maandelijks','Per 3 maanden','Per 6 maanden','Jaarlijks']
@@ -12,6 +13,7 @@ const todayISO = () => new Date().toISOString().slice(0,10)
 const daysUntil = d => d ? Math.ceil((new Date(d)-new Date())/864e5) : null
 
 export default function Maintenance() {
+  const [topTab, setTopTab] = useState('productie')
   const [tab, setTab] = useState('schedule')
   const [schedule, setSchedule] = useState([])
   const [bladeLog, setBladeLog] = useState([])
@@ -23,18 +25,30 @@ export default function Maintenance() {
   const [bladeForm, setBladeForm] = useState({type:'',machine:'',replacedAt:'',notes:'',cost:''})
   const [videoForm, setVideoForm] = useState({title:'',url:'',category:'Onderhoud',notes:''})
   const [notifSettings, setNotifSettings] = useState({enabled:true,daysBefore:3,oilReminder:'Wekelijks',bladeReminder:'Maandelijks'})
+  const [qa, setQa] = useState([])
+  const [showAddQa, setShowAddQa] = useState(false)
+  const [newQa, setNewQa] = useState({cat:'Shopify',label:''})
 
   useEffect(() => {
     api.getSetting('maintenance_schedule').then(v => { if(v?.length) setSchedule(v) })
     api.getSetting('blade_log').then(v => { if(v?.length) setBladeLog(v) })
     api.getSetting('maintenance_videos').then(v => { if(v?.length) setVideos(v) })
     api.getSetting('maintenance_notif').then(v => { if(v) setNotifSettings(v) })
+    api.getSetting('qa_checklist').then(v => { if(v?.length) setQa(v) })
   }, [])
 
   const saveSchedule = items => { setSchedule(items); api.saveSetting('maintenance_schedule', items) }
   const saveBlades = items => { setBladeLog(items); api.saveSetting('blade_log', items) }
   const saveVideos = items => { setVideos(items); api.saveSetting('maintenance_videos', items) }
   const saveNotif = ns => { setNotifSettings(ns); api.saveSetting('maintenance_notif', ns) }
+  const saveQa = items => { setQa(items); api.saveSetting('qa_checklist', items) }
+  const toggleQa = id => { const user=JSON.parse(localStorage.getItem('artazest_user')||'{}'); saveQa(qa.map(q=>q.id===id?{...q,checked:!q.checked,by:!q.checked?user.name:null,at:!q.checked?new Date().toISOString():null}:q)) }
+  const addQaItem = () => { if(!newQa.label.trim())return; saveQa([...qa,{id:`q${Date.now()}`,cat:newQa.cat,label:newQa.label.trim(),checked:false,by:null,at:null}]); setNewQa({cat:'Shopify',label:''}); setShowAddQa(false) }
+  const removeQa = id => saveQa(qa.filter(q=>q.id!==id))
+  const QA_CATS = ['Shopify','Betaling','Analytics','Mobiel','Email','Content','Juridisch']
+  const QA_ICONS = {Shopify:'🛒',Betaling:'💳',Analytics:'📊',Mobiel:'📱',Email:'📧',Content:'📝',Juridisch:'⚖️'}
+  const qaChecked = qa.filter(q=>q.checked).length
+  const qaPct = qa.length>0?Math.round(qaChecked/qa.length*100):0
 
   // Schedule CRUD
   const addScheduleItem = () => {
@@ -91,6 +105,7 @@ export default function Maintenance() {
   const tabs = [
     {key:'schedule',label:'Onderhoudsschema',icon:'🔧'},
     {key:'blades',label:'Messen & Frezen',icon:'🔪'},
+    {key:'launch',label:'Launch QA',icon:'🚀'},
     {key:'videos',label:'How-to Video\'s',icon:'🎬'},
     {key:'settings',label:'Instellingen',icon:'⚙️'},
   ]
@@ -100,15 +115,24 @@ export default function Maintenance() {
       <div className="page-header">
         <div>
           <h1>Onderhoud</h1>
-          <p className="page-subtitle">Machines, messen & tutorials — {overdue.length > 0 ? `⚠️ ${overdue.length} achterstallig` : '✅ Alles up-to-date'}</p>
+          <p className="page-subtitle">{topTab==='shopify'?'Shopify store checks & monitoring':'Machines, messen & tutorials'} — {overdue.length > 0 ? `⚠️ ${overdue.length} achterstallig` : '✅ Alles up-to-date'}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => {
+        {topTab==='productie'&&<button className="btn btn-primary" onClick={() => {
           if(tab==='schedule') setShowAdd(true)
           else if(tab==='blades') setShowAddBlade(true)
           else setShowAddVideo(true)
-        }}>+ Toevoegen</button>
+        }}>+ Toevoegen</button>}
       </div>
 
+      {/* Top-level tabs */}
+      <div style={{display:'flex',gap:'0.5rem',marginBottom:'1.25rem'}}>
+        <button onClick={()=>setTopTab('shopify')} style={{flex:1,padding:'0.7rem 1rem',borderRadius:'12px',border:'none',cursor:'pointer',fontFamily:'var(--font-body)',fontSize:'0.88rem',fontWeight:600,textAlign:'center',transition:'all 0.15s',background:topTab==='shopify'?'#1C1917':'#F2F0EB',color:topTab==='shopify'?'#fff':'#1C1917'}}>🛒 Shopify Store</button>
+        <button onClick={()=>setTopTab('productie')} style={{flex:1,padding:'0.7rem 1rem',borderRadius:'12px',border:'none',cursor:'pointer',fontFamily:'var(--font-body)',fontSize:'0.88rem',fontWeight:600,textAlign:'center',transition:'all 0.15s',background:topTab==='productie'?'#1C1917':'#F2F0EB',color:topTab==='productie'?'#fff':'#1C1917'}}>⚙️ Productie Onderhoud</button>
+      </div>
+
+      {topTab==='shopify'&&<HealthMonitor embedded/>}
+
+      {topTab==='productie'&&<>
       {/* Score cards */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'1rem',marginBottom:'1.5rem'}}>
         <div className="card" style={{textAlign:'center',padding:'1rem'}}>
@@ -270,6 +294,39 @@ export default function Maintenance() {
         )}
       </>)}
 
+      {/* LAUNCH QA TAB */}
+      {tab==='launch'&&(<>
+        <div style={{display:'flex',gap:'1rem',marginBottom:'1rem'}}>
+          <div className="card" style={{textAlign:'center',padding:'1rem',flex:1}}><div style={{fontSize:'2rem',fontWeight:700,color:qaPct===100?'#059669':qaPct>=70?'var(--accent)':'#DC2626'}}>{qaPct}%</div><div style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>Checklist</div></div>
+          <div className="card" style={{textAlign:'center',padding:'1rem',flex:1}}><div style={{fontSize:'2rem',fontWeight:700}}>{qaChecked}/{qa.length}</div><div style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>Items</div></div>
+          <div className="card" style={{textAlign:'center',padding:'1rem',flex:1}}><div style={{fontSize:'2rem',fontWeight:700,color:qaPct===100?'#059669':'#DC2626'}}>{qaPct===100?'GO':'NO GO'}</div><div style={{fontSize:'0.72rem',color:'var(--text-secondary)'}}>Launch</div></div>
+        </div>
+        <div className="card">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
+            <h3 className="section-title" style={{margin:0}}>QA Checklist</h3>
+            <button onClick={()=>setShowAddQa(!showAddQa)} style={{padding:'0.2rem 0.5rem',borderRadius:'6px',border:'1px solid var(--border)',background:'var(--bg-secondary)',cursor:'pointer',fontSize:'0.7rem',fontWeight:600}}>+ Item</button>
+          </div>
+          {showAddQa&&<div style={{display:'flex',gap:'0.4rem',marginBottom:'0.5rem',padding:'0.4rem',borderRadius:'8px',background:'var(--bg-secondary)'}}>
+            <select value={newQa.cat} onChange={e=>setNewQa({...newQa,cat:e.target.value})} style={{padding:'0.25rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.75rem'}}>{QA_CATS.map(c=><option key={c}>{c}</option>)}</select>
+            <input value={newQa.label} onChange={e=>setNewQa({...newQa,label:e.target.value})} onKeyDown={e=>e.key==='Enter'&&addQaItem()} placeholder="Check item..." style={{flex:1,padding:'0.25rem 0.5rem',borderRadius:'4px',border:'1px solid var(--border)',fontSize:'0.75rem'}}/>
+            <button onClick={addQaItem} style={{padding:'0.25rem 0.5rem',borderRadius:'4px',background:'var(--accent)',color:'#fff',border:'none',cursor:'pointer',fontSize:'0.7rem'}}>+</button>
+          </div>}
+          <div style={{height:'6px',background:'var(--bg-secondary)',borderRadius:'99px',overflow:'hidden',marginBottom:'0.75rem'}}><div style={{height:'100%',width:`${qaPct}%`,background:qaPct===100?'#059669':'var(--accent)',borderRadius:'99px',transition:'width 0.5s'}}/></div>
+          {QA_CATS.map(cat=>{const items=qa.filter(q=>q.cat===cat);if(!items.length)return null;const catDone=items.filter(q=>q.checked).length;return(
+            <div key={cat} style={{marginBottom:'0.6rem'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.25rem'}}><span>{QA_ICONS[cat]}</span><span style={{fontWeight:600,fontSize:'0.82rem'}}>{cat}</span><span style={{fontSize:'0.65rem',color:catDone===items.length?'#059669':'var(--text-secondary)',marginLeft:'auto'}}>{catDone}/{items.length}</span></div>
+              {items.map(q=><div key={q.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.25rem 0',borderBottom:'1px solid rgba(28,25,23,0.04)'}}>
+                <input type="checkbox" checked={q.checked} onChange={()=>toggleQa(q.id)} style={{accentColor:'var(--accent)',cursor:'pointer'}}/>
+                <span style={{fontSize:'0.78rem',textDecoration:q.checked?'line-through':'none',color:q.checked?'var(--text-secondary)':'var(--text-primary)',flex:1}}>{q.label}</span>
+                {q.by&&<span style={{fontSize:'0.6rem',color:'var(--text-secondary)'}}>{q.by}</span>}
+                <button onClick={()=>removeQa(q.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.6rem',opacity:0.4}} onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.4'}>✕</button>
+              </div>)}
+            </div>
+          )})}
+          {qa.length===0&&<div style={{textAlign:'center',padding:'1.5rem',color:'var(--text-secondary)',fontSize:'0.82rem'}}>Nog geen checklist items. Klik "+ Item" of ga naar Launch om ze te importeren.</div>}
+        </div>
+      </>)}
+
       {/* VIDEOS TAB */}
       {tab==='videos' && (<>
         {showAddVideo && (
@@ -377,6 +434,7 @@ export default function Maintenance() {
           </div>
         </div>
       )}
+      </>}
     </>
   )
 }

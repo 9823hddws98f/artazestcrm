@@ -62,7 +62,7 @@ const STATUS_STYLE = {
   overdue: { bg: '#FEF2F2', border: '#FECACA', dot: '#DC2626', text: '!' },
 }
 
-export default function HealthMonitor() {
+export default function HealthMonitor({embedded}) {
   const [checks, setChecks] = useState(DEFAULT_CHECKS.map(c => ({ ...c, lastChecked: null, lastBy: null, notes: '' })))
   const [showAdd, setShowAdd] = useState(false)
   const [newCheck, setNewCheck] = useState({ label: '', freq: 'weekly', cat: 'Site', url: '' })
@@ -97,12 +97,12 @@ export default function HealthMonitor() {
 
   return (
     <>
-      <div className="page-header">
+      {!embedded&&<div className="page-header">
         <div>
           <h1>Health Monitor</h1>
           <p className="page-subtitle">Periodieke checks — {stats.ok} ok · {stats.due} binnenkort · {stats.overdue} overdue</p>
         </div>
-      </div>
+      </div>}
 
       {/* Score + stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>

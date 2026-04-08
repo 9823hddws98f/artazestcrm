@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { uploadImage } from '../supabase'
 
@@ -38,6 +39,7 @@ const KLEUREN = [
 const FORMATS = ['60 x 60','120 x 60','100 x 70','114 x 60','70 x 100','120 x 30','90 cm']
 
 export default function Catalog() {
+  const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [search, setSearch] = useState('')
   const [filterKleur, setFilterKleur] = useState([])
@@ -108,6 +110,7 @@ export default function Catalog() {
         <div><h1>Catalogus</h1>
           <p className="page-subtitle">{items.length} artworks &middot; {items.filter(a => a.online).length} live</p></div>
         <div style={{display:'flex',gap:'0.5rem'}}>
+          <button onClick={()=>navigate('/development')} className="btn btn-sm btn-outline" style={{display:'flex',alignItems:'center',gap:'0.3rem'}}>🧪 In Ontwikkeling</button>
           <button className={`btn btn-sm ${editMode?'btn-primary':'btn-outline'}`} onClick={()=>setEditMode(!editMode)}>
             {editMode ? '✓ Gereed' : '✎ Bewerken'}</button>
           {items.length===0&&<button className="btn btn-sm btn-outline" onClick={seedCatalog}>🔄 Laad 23 artworks</button>}
@@ -151,7 +154,7 @@ export default function Catalog() {
             </div>
             <div style={{padding:'0.5rem 0.6rem',background:'var(--bg-card)'}}>
               <div style={{fontSize:'0.72rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                {a.nummer?`${a.nummer}. `:''}{a.name}</div>
+                {idx+1}. {a.name}</div>
               {a.format&&<div style={{fontSize:'0.65rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{a.format}</div>}
               <div style={{display:'flex',gap:'0.2rem',marginTop:'0.3rem'}}>
                 {(a.kleuren||[]).map(k=>{const kl=KLEUREN.find(x=>x.key===k);return kl?<span key={k} style={{width:'11px',height:'11px',borderRadius:'50%',background:kl.hex,border:k==='White'?'1px solid var(--border)':'none'}} title={kl.label}/>:null})}
