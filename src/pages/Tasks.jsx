@@ -1445,6 +1445,15 @@ export default function Tasks({ user }) {
   const archived=tasks.filter(t=>t.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0))
   const counts={todo:filtered.filter(t=>t.status==='todo').length,gepland:filtered.filter(t=>t.status==='gepland').length,bezig:filtered.filter(t=>t.status==='bezig'||t.status==='in-uitvoering').length,klaar:filtered.filter(t=>t.status==='klaar').length}
   const views=[{key:'kanban',label:'Kanban'},{key:'lijst',label:'Lijst'},{key:'kalender',label:'Kalender'},{key:'archief',label:`Archief (${archived.length})`}]
+  const exportCSV = () => {
+    const rows = [['Titel','Status','Prioriteit','Categorie','Assignee','Deadline','Aangemaakt','Subtaken','Archived']]
+    tasks.forEach(t => rows.push([t.title,t.status,t.priority,t.category,t.assignee,t.dueDate||'',t.createdAt||'',(t.subtasks||[]).length,t.archived?'Ja':'Nee']))
+    const csv = rows.map(r => r.map(c => `"${(c+'').replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `artazest-taken-${new Date().toISOString().slice(0,10)}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <>
@@ -1504,6 +1513,7 @@ export default function Tasks({ user }) {
           <button className={`btn btn-sm ${filterUser==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser('all')}>Alle</button>
           {ASSIGNEES.map(a=><button key={a} className={`btn btn-sm ${filterUser===a?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser(a)}>{a}</button>)}
           <button className="btn btn-sm btn-outline" onClick={()=>setShowPhaseEdit(!showPhaseEdit)} style={{marginLeft:'0.25rem',fontSize:'0.75rem',color:'var(--text-secondary)'}}>⚙</button>
+          <button className="btn btn-sm btn-outline" onClick={exportCSV} style={{fontSize:'0.7rem',color:'var(--text-secondary)'}} title="Exporteer taken als CSV">📥</button>
         </div>
       </div>
 
