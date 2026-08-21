@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
+import Board from './Board'
 
 // Module-level — nooit stale, werkt buiten React render cycle
 let _DRAG_ID = null
@@ -403,7 +404,7 @@ function DagelijkseCheckinsCompact() {
   const [editStatus, setEditStatus] = useState(null) // id van persoon wiens status je bewerkt
   const viaIcon = {WhatsApp:'💬', Bellen:'📞', Email:'📧', Bezoek:'🤝', Teams:'💻'}
   const VIA_OPTIONS = ['WhatsApp','Bellen','Email','Bezoek','Teams']
-  const getState = item => item.checkedDate === today ? 'done' : item.status ? 'waiting' : 'none'
+  const getState = item => item.checkedDate === today ? 'done' : (item.status && item.statusDate === today) ? 'waiting' : 'none'
   const doneCount = items.filter(i => getState(i)==='done').length
   const waitCount = items.filter(i => getState(i)==='waiting').length
 
@@ -413,7 +414,7 @@ function DagelijkseCheckinsCompact() {
     const st = getState(item)
     // Cycle: none → waiting → done → none
     const next = st==='none' ? 'waiting' : st==='waiting' ? 'done' : 'none'
-    const u = items.map(i => i.id===id ? {...i, checkedDate: next==='none'?null:today, checkState: next==='none'?null:next } : i)
+    const u = items.map(i => i.id===id ? {...i, checkedDate: next==='none'?null:today, checkState: next==='none'?null:next, statusDate: next==='none'?null:today } : i)
     save(u); setItems(u)
   }
   const remove = id => { const u = items.filter(i=>i.id!==id); save(u); setItems(u) }
@@ -423,7 +424,7 @@ function DagelijkseCheckinsCompact() {
     save(u); setItems(u); setForm({name:'', via:'WhatsApp', topic:''}); setShowAdd(false)
   }
   const updateStatus = (id, val) => {
-    const u = items.map(i => i.id===id ? {...i, status:val} : i)
+    const u = items.map(i => i.id===id ? {...i, status:val, statusDate: val ? today : null} : i)
     save(u); setItems(u)
   }
   const toggleNotif = (id) => {
@@ -731,10 +732,11 @@ function Timeline({ tasks, onDropDay, draggedId, onTaskClick, onTaskUpdate }) {
 }
 
 
-function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDragEnd, draggedId, onClearDay }) {
+function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDragEnd, draggedId, onClearDay, onQuickAdd }) {
   const today = todayISO()
   const doneTodayCount = tasks.filter(t => t.plannedDate===today && t.status==='klaar').length
   const [isOver, setIsOver] = useState(false)
+  const [quickVal, setQuickVal] = useState('')
   const [localOrder, setLocalOrder] = useState([])
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [internalDragIdx, setInternalDragIdx] = useState(null)
@@ -768,7 +770,7 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
   }
 
   return (
-    <div style={{width:'248px',flexShrink:0}}>
+    <div style={{width:'100%'}}>
       <div
         onDragOver={e=>{e.preventDefault();if(internalDragIdx===null)setIsOver(true)}}
         onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget)){setIsOver(false);setDragOverIdx(null)}}}
@@ -779,30 +781,32 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
           const _vid = _DRAG_ID||draggedId; if(_vid){onDropToday(_vid);_DRAG_ID=null}
         }}
         className="card"
-        style={{borderTop:'3px solid #D97706',position:'sticky',top:'1rem',maxHeight:'calc(100vh - 180px)',overflowY:'auto',background:isOver?'#FFFBF0':'var(--bg-card)',outline:isOver&&internalDragIdx===null?'2px dashed #D97706':'none',outlineOffset:'2px',transition:'all 0.1s'}}>
+        style={{borderTop:'3px solid #D97706',background:isOver?'#FFFBF0':'var(--bg-card)',outline:isOver&&internalDragIdx===null?'2px dashed #D97706':'none',outlineOffset:'2px',transition:'all 0.1s'}}>
 
-        <div style={{marginBottom:'0.75rem'}}>
-          <div style={{fontSize:'0.65rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#D97706'}}>Vandaag</div>
-          <div style={{fontSize:'0.73rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{dayStr}</div>
-          {doneTodayCount>0&&<div style={{fontSize:'0.7rem',color:'#059669',marginTop:'0.2rem'}}>✓ {doneTodayCount} afgerond</div>}
+        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'0.4rem',flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+            <span style={{fontSize:'0.6rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#D97706'}}>Vandaag</span>
+            <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{dayStr}</span>
+            {doneTodayCount>0&&<span style={{fontSize:'0.6rem',color:'#059669'}}>✓ {doneTodayCount}</span>}
+          </div>
         </div>
 
         {ordered.length===0?(
-          <div style={{textAlign:'center',padding:'1.5rem 0.5rem 1rem',color:'var(--text-secondary)',fontSize:'0.78rem',lineHeight:1.4}}>
+          <div style={{textAlign:'center',padding:'0.5rem',color:'var(--text-secondary)',fontSize:'0.7rem',lineHeight:1.4}}>
             {isOver?<span style={{color:'#D97706',fontWeight:600}}>Laat hier los</span>:'Sleep taken hiernaartoe voor jouw dagplanning'}
           </div>
         ):(
-          <div style={{display:'flex',flexDirection:'column',gap:'0'}}>
+          <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem'}}>
             {ordered.map((t, idx) => {
               if (!t) return null
               const subs=t.subtasks||[]; const subDone=subs.filter(s=>s.completed).length
               const st=statuses.find(s=>s.key===t.status)||statuses[0]
               const isBeingDragged = internalDragIdx === idx
               const showDropLine = dragOverIdx === idx && internalDragIdx !== idx
+              const allDone = subs.length>0&&subDone===subs.length
 
               return (
                 <div key={t.id}>
-                  {/* Drop indicator lijn */}
                   <div
                     onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverIdx(idx)}}
                     onDrop={e=>{e.preventDefault();e.stopPropagation();handleInternalDrop(idx)}}
@@ -810,36 +814,18 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
                   />
                   <div
                     draggable
-                    onDragStart={e=>{
-                      e.dataTransfer.effectAllowed='move'
-                      e.dataTransfer.setData('text/plain', t.id)
-                      setInternalDragIdx(idx)
-                      onDragStart && onDragStart(t.id)
-                    }}
+                    onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);setInternalDragIdx(idx);onDragStart&&onDragStart(t.id)}}
                     onDragEnd={()=>{setInternalDragIdx(null);setDragOverIdx(null);onDragEnd&&onDragEnd()}}
                     onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverIdx(idx+1)}}
                     onClick={()=>onEdit(t)}
-                    style={{padding:'0.45rem 0.55rem',borderRadius:'var(--radius-md)',border:'1px solid var(--border)',cursor:'grab',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,background:'var(--bg-secondary)',marginBottom:'0.3rem',opacity:isBeingDragged?0.35:1,transition:'opacity 0.15s,box-shadow 0.1s',userSelect:'none'}}
-                    onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.07)'}
-                    onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
-                    <div style={{display:'flex',alignItems:'flex-start',gap:'0.35rem'}}>
-                      <span style={{color:'var(--text-secondary)',fontSize:'0.65rem',paddingTop:'0.1rem',cursor:'grab',flexShrink:0}}>⠿</span>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:'0.79rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</div>
-                        <div style={{display:'flex',alignItems:'center',gap:'0.35rem',marginTop:'0.1rem'}}>
-                          <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{t.assignee}</span>
-                          {subs.length>0&&<span style={{fontSize:'0.63rem',color:subDone===subs.length?'#059669':'var(--text-secondary)'}}>{subDone}/{subs.length}</span>}
-                        </div>
-                        {subs.length>0&&<div style={{marginTop:'0.25rem',height:'2px',background:'var(--bg-card)',borderRadius:'99px',overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(subDone/subs.length*100)}%`,background:subDone===subs.length?'#059669':'#D97706',borderRadius:'99px'}}/></div>}
-                      </div>
-                      {/* Verwijder uit vandaag */}
-                      <button
-                        onClick={e=>{e.stopPropagation();onClearDay&&onClearDay(t.id)}}
-                        title="Verwijder uit dagplanning"
-                        style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.7rem',padding:'0.1rem 0.15rem',lineHeight:1,flexShrink:0,borderRadius:'4px'}}
-                        onMouseEnter={e=>e.currentTarget.style.color='#DC2626'}
-                        onMouseLeave={e=>e.currentTarget.style.color='var(--text-secondary)'}>×</button>
-                    </div>
+                    style={{display:'flex',alignItems:'center',gap:'0.4rem',padding:'0.3rem 0.55rem',borderRadius:'6px',background:'var(--bg-card,#FEFCE8)',border:'1px solid var(--border,#e5e7eb)',cursor:'grab',opacity:isBeingDragged?0.3:1,transition:'opacity 0.15s,background 0.1s',userSelect:'none'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg-hover,#FEF9C3)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='var(--bg-card,#FEFCE8)'}>
+                    <span style={{width:20,height:20,borderRadius:'50%',border: allDone?'none':`2px solid ${st.color||'#D4D4D4'}`,background:allDone?'#059669':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,color:'#fff'}}>{allDone&&'✓'}</span>
+                    <span style={{flex:1,fontSize:'0.85rem',fontWeight:500,color:'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</span>
+                    <button onClick={e=>{e.stopPropagation();onClearDay&&onClearDay(t.id)}} title="Verwijder uit dagplanning"
+                      style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-tertiary,#bbb)',fontSize:'0.8rem',padding:'0 0.15rem',lineHeight:1,flexShrink:0}}
+                      onMouseEnter={e=>e.currentTarget.style.color='#DC2626'} onMouseLeave={e=>e.currentTarget.style.color='var(--text-tertiary,#bbb)'}>×</button>
                   </div>
                 </div>
               )
@@ -856,6 +842,11 @@ function VandaagPanel({ tasks, statuses, onDropToday, onEdit, onDragStart, onDra
         {isOver&&ordered.length>0&&internalDragIdx===null&&(
           <div style={{textAlign:'center',padding:'0.4rem',borderRadius:'6px',border:'2px dashed #D97706',color:'#D97706',fontSize:'0.73rem',fontWeight:600,marginTop:'0.25rem'}}>↓ Hier neerzetten</div>
         )}
+
+        <div style={{marginTop:'0.3rem',display:'flex',gap:'0.3rem',maxWidth:'250px'}}>
+          <input value={quickVal} onChange={e=>setQuickVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&quickVal.trim()){onQuickAdd&&onQuickAdd(quickVal.trim());setQuickVal('')}}} placeholder="+ taak toevoegen..." style={{flex:1,padding:'0.35rem 0.5rem',borderRadius:'6px',border:'1px solid var(--border)',fontSize:'0.78rem',background:'var(--bg-secondary)',color:'var(--text-primary)',fontFamily:'var(--font-body)',outline:'none'}} />
+          {quickVal.trim()&&<button onClick={()=>{onQuickAdd&&onQuickAdd(quickVal.trim());setQuickVal('')}} style={{border:'none',background:'#D97706',color:'#fff',borderRadius:'6px',padding:'0 0.5rem',fontSize:'0.78rem',fontWeight:600,cursor:'pointer',flexShrink:0}}>+</button>}
+        </div>
       </div>
     </div>
   )
@@ -876,30 +867,25 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
       <div style={{display:'flex',alignItems:'stretch',gap:'0',marginBottom:'0.28rem',userSelect:'none'}}>
         {/* Checkbox buiten kaart */}
         {onToggleSelect&&<div style={{display:'flex',alignItems:'center',paddingRight:'0.3rem',flexShrink:0}} onClick={e=>e.stopPropagation()}>
-          <input type="checkbox" checked={!!isSelected} onChange={()=>onToggleSelect(t.id)} style={{width:'14px',height:'14px',cursor:'pointer',accentColor:'var(--accent)'}}/>
+          <input type="checkbox" checked={!!isSelected} onChange={()=>onToggleSelect(t.id)} style={{width:'12px',height:'12px',cursor:'pointer',accentColor:'var(--accent)'}}/>
         </div>}
         {/* Drag handle buiten kaart */}
         {isDraggable&&<div
           draggable
           onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id);_DRAG_ID=t.id;onDragStart&&onDragStart()}}
           onDragEnd={()=>onDragEnd&&onDragEnd()}
-          style={{display:'flex',alignItems:'center',justifyContent:'center',width:'18px',cursor:'grab',flexShrink:0,color:'#D6D3D1',fontSize:'1rem',lineHeight:1,borderRadius:'4px',transition:'color 0.15s'}}
+          style={{display:'flex',alignItems:'center',justifyContent:'center',width:'14px',cursor:'grab',flexShrink:0,color:'#D6D3D1',fontSize:'0.7rem',lineHeight:1,borderRadius:'4px',transition:'color 0.15s'}}
           onMouseEnter={e=>{e.currentTarget.style.color='#78716C';e.currentTarget.style.background='var(--bg-secondary)'}}
           onMouseLeave={e=>{e.currentTarget.style.color='#D6D3D1';e.currentTarget.style.background='none'}}>⠿</div>}
         {/* Kaart zelf */}
         <div
           onClick={onClick}
-          style={{flex:1,minWidth:0,padding:'0.45rem 0.6rem',borderRadius:'8px',border:'1px solid var(--border)',cursor:'pointer',background:isSelected?'#EFF6FF':'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,transition:'all 0.1s'}}
+          style={{flex:1,minWidth:0,padding:'0.15rem 0.3rem',borderRadius:'8px',border:'1px solid var(--border)',cursor:'pointer',background:isSelected?'#EFF6FF':'var(--bg-card)',borderLeft:`3px solid ${t.priority==='high'?'#DC2626':st.color}`,opacity:t.status==='klaar'?0.5:1,transition:'all 0.1s'}}
           onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
           onMouseLeave={e=>e.currentTarget.style.boxShadow=''}>
           {/* Row 1: Title */}
-          <div style={{fontWeight:600,fontSize:'0.82rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.3,color:'var(--text-primary)'}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
-          {/* Row 2: Assignee + Category + Tags */}
-          <div style={{display:'flex',alignItems:'center',gap:'0.25rem',marginTop:'0.2rem',flexWrap:'wrap'}}>
-            <span style={{fontSize:'0.62rem',color:'var(--text-secondary)'}}>{t.assignee}</span>
-            {t.category&&t.category!=='Overig'&&<span style={{fontSize:'0.55rem',padding:'0.05rem 0.3rem',borderRadius:'99px',background:'#F2F0EB',color:'#78716C',fontWeight:500}}>{t.category}</span>}
-            {t.priority==='high'&&<span style={{fontSize:'0.55rem',padding:'0.05rem 0.28rem',borderRadius:'99px',background:'#FEE2E2',color:'#DC2626',fontWeight:700}}>urgent</span>}
-          </div>
+          <div style={{fontWeight:500,fontSize:'0.82rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:t.status==='klaar'?'line-through':'none',lineHeight:1.15,color:'var(--text-primary)'}}>{t.isMIT&&<span style={{marginRight:'0.2rem'}}>🔥</span>}{t.title}</div>
+
           {/* Row 3: Date + Subtasks */}
           {(t.dueDate||subPct!==null)&&<div style={{display:'flex',alignItems:'center',gap:'0.3rem',marginTop:'0.2rem'}}>
             {t.dueDate&&<span style={{fontSize:'0.6rem',fontWeight:600,padding:'0.05rem 0.3rem',borderRadius:'4px',background:overdue?'#FEE2E2':isToday2?'var(--accent-light)':soon?'#FEF3C7':'var(--bg-secondary)',color:overdue?'#DC2626':isToday2?'var(--accent)':soon?'#92400E':'var(--text-secondary)'}}>{overdue?`⚠ ${Math.abs(days)}d te laat`:isToday2?'📅 Vandaag':soon?`⏰ ${days}d`:fmt(t.dueDate)}</span>}
@@ -907,8 +893,8 @@ function TaskCard({task:t,statuses,onClick,onStatusChange,onSubtaskToggle,onArch
           </div>}
           {/* Menu */}
           {showArchiveBtn&&onArchive&&(
-            <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.25rem',position:'relative'}} onClick={e=>e.stopPropagation()}>
-              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',color:'var(--text-secondary)',padding:'0.05rem 0.3rem',lineHeight:1,borderRadius:'4px'}}
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0',position:'relative'}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.6rem',color:'var(--text-secondary)',padding:'0 0.15rem',lineHeight:1,borderRadius:'4px'}}
                 onMouseEnter={e=>e.currentTarget.style.background='var(--bg-secondary)'} onMouseLeave={e=>{if(!menuOpen)e.currentTarget.style.background='none'}}>⋯</button>
               {menuOpen&&<div style={{position:'absolute',right:0,bottom:'100%',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'6px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:50,overflow:'hidden',minWidth:'110px'}}>
                 {onPin&&<button onClick={()=>{onPin();setMenuOpen(false)}} style={{display:'block',width:'100%',textAlign:'left',padding:'0.35rem 0.6rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.68rem',color:'var(--text-primary)',fontFamily:'var(--font-body)'}}
@@ -1301,14 +1287,17 @@ export default function Tasks({ user }) {
     if(s){const parsed=JSON.parse(s);if(!parsed.find(x=>x.key==='gepland')){const m=[parsed[0],{key:'gepland',label:'Gepland',color:'#2563EB'},...parsed.slice(1)];localStorage.setItem('artazest_statuses',JSON.stringify(m));return m};return parsed}
     return DEFAULT_STATUSES
   })
+  const [trackersOpen,setTrackersOpen]=useState(false)
+  const [boardView,setBoardView]=useState(false)
   const [showPhaseEdit,setShowPhaseEdit]=useState(false)
+  const [showExtraCols,setShowExtraCols]=useState(false)
   const [dragPhase,setDragPhase]=useState(null)
   const [dragOverPhase,setDragOverPhase]=useState(null)
   const [newPhase,setNewPhase]=useState('')
   const [timelineOpen,setTimelineOpen]=useState(false)
   const [activeProject,setActiveProject]=useState('alle')
   const [projects,setProjects]=useState(()=>{
-    try { return JSON.parse(localStorage.getItem('artazest_projects') || '[]') }
+    try { return JSON.parse(localStorage.getItem('artazest_projects') || '[]').filter(p=>p&&p.trim()) }
     catch { return [] }
   })
   const [showAddProject,setShowAddProject]=useState(false)
@@ -1322,7 +1311,7 @@ export default function Tasks({ user }) {
   const saveProjects=ps=>{setProjects(ps);localStorage.setItem('artazest_projects',JSON.stringify(ps));api.saveSetting('projects',ps)}
   useEffect(()=>{
     api.getSetting('statuses').then(val=>{if(val&&val.length>0)setStatuses(val)})
-    api.getSetting('projects').then(val=>{if(val&&val.length>0)setProjects(val)})
+    api.getSetting('projects').then(val=>{if(val&&val.length>0)setProjects(val.filter(p=>p&&p.trim()))})
   },[])
   const addProject=()=>{
     if(!newProject.trim()) return
@@ -1468,14 +1457,24 @@ export default function Tasks({ user }) {
           }}>+ Nieuwe taak</button>
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'flex-start',gap:'0.75rem',marginBottom:'0.35rem',overflowX:'auto',paddingBottom:'0.15rem'}}>
-        <DagelijkseCheckinsCompact/>
-        <HiringTracker/>
-        <DesignersTracker/>
-        <PlatformCheckins/>
+      <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.75rem'}}><div style={{display:'flex',borderRadius:8,border:'1px solid var(--border)',overflow:'hidden'}}><button onClick={()=>setBoardView(false)} style={{padding:'0.3rem 0.7rem',border:'none',fontSize:'0.75rem',fontWeight:600,cursor:'pointer',background:!boardView?'#D97706':'var(--bg-secondary)',color:!boardView?'#fff':'var(--text-secondary)'}}>Taken</button><button onClick={()=>setBoardView(true)} style={{padding:'0.3rem 0.7rem',border:'none',fontSize:'0.75rem',fontWeight:600,cursor:'pointer',background:boardView?'#D97706':'var(--bg-secondary)',color:boardView?'#fff':'var(--text-secondary)'}}>Board</button></div></div>
+      {boardView ? <Board /> : <><div style={{marginBottom:'0.35rem'}}>
+        <button onClick={()=>setTrackersOpen(!trackersOpen)} style={{display:'flex',alignItems:'center',gap:'0.5rem',width:'100%',padding:'0.4rem 0.6rem',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',cursor:'pointer',fontSize:'0.7rem',fontWeight:600,color:'var(--text-secondary)',textAlign:'left'}}>
+          <span style={{transition:'transform 0.15s',transform:trackersOpen?'rotate(90deg)':'rotate(0deg)'}}>▸</span>
+          <span>Check-ins · Designers · Platforms</span>
+          <span style={{marginLeft:'auto',fontSize:'0.6rem',color:'var(--text-tertiary)'}}>klik om {trackersOpen?'in te klappen':'te openen'}</span>
+        </button>
+        {trackersOpen && (
+          <div style={{display:'flex',alignItems:'flex-start',gap:'0.75rem',marginTop:'0.35rem',overflowX:'auto',paddingBottom:'0.15rem'}}>
+            <DagelijkseCheckinsCompact/>
+            <HiringTracker/>
+            <DesignersTracker/>
+            <PlatformCheckins/>
+          </div>
+        )}
       </div>
 
-      <Timeline tasks={active} onDropDay={assignDay} draggedId={draggedId} onTaskClick={startEdit} onTaskUpdate={updateTaskDates}/>
+      {/* Timeline verwijderd */}
 
       {/* Signal & Sticky lane */}
       {active.filter(t=>t.isSticky).length>0&&(
@@ -1508,7 +1507,7 @@ export default function Tasks({ user }) {
       )}
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem',flexWrap:'wrap',gap:'0.5rem'}}>
-        <div className="tabs" style={{marginBottom:0,borderBottom:'none'}}>{views.map(v=><button key={v.key} className={`tab ${view===v.key?'active':''}`} onClick={()=>setView(v.key)}>{v.label}</button>)}</div>
+        
         <div style={{display:'flex',gap:'0.35rem',alignItems:'center'}}>
           <button className={`btn btn-sm ${filterUser==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser('all')}>Alle</button>
           {ASSIGNEES.map(a=><button key={a} className={`btn btn-sm ${filterUser===a?'btn-primary':'btn-outline'}`} onClick={()=>setFilterUser(a)}>{a}</button>)}
@@ -1594,12 +1593,36 @@ export default function Tasks({ user }) {
         <div style={{display:'flex',gap:'0.35rem'}}><input className="form-input" value={newPhase} onChange={e=>setNewPhase(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addPhase()} placeholder="Nieuwe fase..." style={{maxWidth:'180px',padding:'0.3rem 0.6rem',fontSize:'0.8rem'}}/><button className="btn btn-sm btn-outline" onClick={addPhase}>+</button></div>
       </div>)}
 
-      <div style={{display:'flex',gap:'1.25rem',alignItems:'flex-start'}}>
-        <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId} onDragStart={id=>setDraggedId(id)} onDragEnd={()=>setDraggedId(null)} onClearDay={clearDay}/>
-        <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
+      <VandaagPanel tasks={active} statuses={statuses} onDropToday={assignToday} onEdit={startEdit} draggedId={draggedId} onDragStart={id=>setDraggedId(id)} onDragEnd={()=>setDraggedId(null)} onClearDay={clearDay} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:'gepland',priority:'normal',notes:'',dueDate:'',plannedDate:todayISO(),tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}}/>
+      <div style={{overflowX:'auto'}}>
           {view==='kanban'?(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(190px,1fr))',gap:'0.75rem',minWidth:'800px'}}>
-              {statuses.map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key)} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);setTimeout(()=>{_DRAG_ID=null},100)}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)} selected={selected} onToggleSelect={toggleSelect} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:st.key,priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}} onPin={id=>{const t=tasks.find(x=>x.id===id);if(t){if(t.isSticky){api.save('tasks',{...t,isSticky:false});reload()}else if(active.filter(x=>x.isSticky).length<8){api.save('tasks',{...t,isSticky:true});reload()}}}}/>))}
+            <div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'0.75rem'}}>
+              {statuses.filter(st=>st.key==='todo'||st.key==='bezig').map(st=>(<KanbanColumn key={st.key} status={st} statuses={statuses} tasks={filtered.filter(t=>t.status===st.key&&t.plannedDate!==todayISO())} onDrop={(ns,dropId)=>{ const id=dropId||_DRAG_ID||draggedId; if(id){updateStatus(id,ns);_DRAG_ID=null}}} onCardDragStart={id=>{setDraggedId(id);_DRAG_ID=id}} onCardDragEnd={()=>{setDraggedId(null);setTimeout(()=>{_DRAG_ID=null},100)}} onCardClick={startEdit} onStatusChange={(id,s)=>updateStatus(id,s)} onSubtaskToggle={(tid,sid)=>toggleSubtaskOnCard(tid,sid)} onArchive={id=>{const t=tasks.find(x=>x.id===id);if(t)setConfirmArchive({id,title:t.title})}} draggedId={draggedId} onAddTask={()=>{resetForm();setForm(f=>({...f,status:st.key}));setEditing(null);setShowAdd(true)}} onReorder={(id,idx)=>reorderInColumn(id,idx,st.key)} selected={selected} onToggleSelect={toggleSelect} onQuickAdd={async title=>{await api.save('tasks',{id:uid(),title,category:activeProject!=='alle'?activeProject:'Overig',assignee:user?.name||'Tein',status:st.key,priority:'normal',notes:'',dueDate:'',plannedDate:'',tags:[],subtasks:[],estimatedHours:0,energyLevel:'middel',recurring:'nooit',isMIT:false,createdAt:new Date().toISOString()});reload()}} onPin={id=>{const t=tasks.find(x=>x.id===id);if(t){if(t.isSticky){api.save('tasks',{...t,isSticky:false});reload()}else if(active.filter(x=>x.isSticky).length<8){api.save('tasks',{...t,isSticky:true});reload()}}}}/>))}
+            </div>
+            {/* Extra kolommen toggle */}
+            <div style={{marginTop:'0.75rem',display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
+              {statuses.filter(st=>st.key!=='todo'&&st.key!=='bezig').map(st=>{
+                const count=filtered.filter(t=>t.status===st.key&&t.plannedDate!==todayISO()).length
+                return <button key={st.key} onClick={()=>setShowExtraCols(showExtraCols===st.key?false:st.key)} style={{padding:'0.25rem 0.6rem',borderRadius:8,border:showExtraCols===st.key?'2px solid '+st.color:'1px solid var(--border)',background:showExtraCols===st.key?st.color+'15':'var(--bg-secondary)',cursor:'pointer',fontSize:'0.7rem',fontWeight:600,color:showExtraCols===st.key?st.color:'var(--text-secondary)',display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                  <span style={{width:8,height:8,borderRadius:'50%',background:st.color}}/>{st.label}<span style={{background:st.color,color:'#fff',borderRadius:20,padding:'0 0.3rem',fontSize:'0.55rem',fontWeight:700}}>{count}</span>
+                </button>
+              })}
+            </div>
+            {showExtraCols&&(()=>{const st=statuses.find(s=>s.key===showExtraCols);if(!st)return null;const items=filtered.filter(t=>t.status===st.key&&t.plannedDate!==todayISO());return(
+              <div style={{marginTop:'0.5rem',background:'var(--bg-secondary)',borderRadius:12,padding:'0.75rem',border:'1px solid var(--border)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.5rem'}}>
+                  <span style={{width:10,height:10,borderRadius:'50%',background:st.color}}/>
+                  <span style={{fontWeight:600,fontSize:'0.8rem',color:'var(--text-primary)'}}>{st.label}</span>
+                  <span style={{fontSize:'0.65rem',color:'var(--text-secondary)'}}>{items.length} taken</span>
+                  <button onClick={()=>setShowExtraCols(false)} style={{marginLeft:'auto',border:'none',background:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:'0.8rem'}}>×</button>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:'0.25rem',maxHeight:'300px',overflowY:'auto'}}>
+                  {items.map(t=><div key={t.id} onClick={()=>startEdit(t)} style={{padding:'0.3rem 0.5rem',borderRadius:6,background:'var(--bg-card)',border:'1px solid var(--border)',cursor:'pointer',fontSize:'0.7rem',fontWeight:500,color:'var(--text-primary)',display:'flex',alignItems:'center',gap:'0.4rem'}} onMouseEnter={e=>e.currentTarget.style.background='var(--bg-hover,#f5f5f4)'} onMouseLeave={e=>e.currentTarget.style.background='var(--bg-card)'}><span style={{textDecoration:st.key==='klaar'?'line-through':'none',flex:1}}>{t.title}</span></div>)}
+                  {items.length===0&&<div style={{fontSize:'0.65rem',color:'var(--text-tertiary)',textAlign:'center',padding:'0.5rem'}}>Geen taken</div>}
+                </div>
+              </div>
+            )})()}
             </div>
           ):view==='archief'?(
             view==='kalender' ? <KalenderView tasks={filtered} onTaskClick={startEdit} onAddTask={(date)=>{resetForm();setForm(f=>({...f,dueDate:date}));setShowAdd(true)}}/> :
@@ -1610,7 +1633,6 @@ export default function Tasks({ user }) {
             <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>{filtered.map(t=><TaskCard key={t.id} task={t} statuses={statuses} draggable onDragStart={()=>setDraggedId(t.id)} onDragEnd={()=>setDraggedId(null)} onClick={()=>startEdit(t)} onStatusChange={s=>updateStatus(t.id,s)} onSubtaskToggle={subId=>toggleSubtaskOnCard(t.id,subId)} onArchive={()=>setConfirmArchive({id:t.id,title:t.title})}/>)}</div>
           )}
         </div>
-      </div>
 
       {/* Project verwijderen bevestiging */}
       {confirmDeleteProject&&(
@@ -1697,7 +1719,7 @@ export default function Tasks({ user }) {
             <div className="form-group"><label className="form-label">Prioriteit</label><button className="btn btn-sm" onClick={()=>setForm({...form,priority:form.priority==='high'?'normal':'high'})} style={{width:'100%',justifyContent:'center',fontSize:'0.75rem',background:form.priority==='high'?'var(--danger)':'transparent',color:form.priority==='high'?'#fff':undefined,border:form.priority==='high'?'none':'1px solid var(--border-strong)'}}>Urgent</button></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.75rem'}}>
-            <div className="form-group"><label className="form-label">Categorie</label><input className="form-input" list="task-categories" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Typ of kies..."/><datalist id="task-categories">{[...new Set([...CATEGORIES,...projects])].map(c=><option key={c} value={c}/>)}</datalist></div>
+            <div className="form-group"><label className="form-label">Categorie</label><select className="form-select" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="Overig">Overig</option>{[...new Set([...CATEGORIES,...projects])].filter(c=>c&&c!=='Overig').map(c=><option key={c} value={c}>{c}</option>)}</select></div>
             <div className="form-group"><label className="form-label">Deadline</label><input className="form-input" type="date" value={form.dueDate||''} onChange={e=>setForm({...form,dueDate:e.target.value})}/></div>
             <div className="form-group"><label className="form-label">Plan op dag</label><input className="form-input" type="date" value={form.plannedDate||''} onChange={e=>setForm({...form,plannedDate:e.target.value,status:e.target.value&&form.status==='todo'?'gepland':form.status})}/></div>
           </div>
@@ -1717,6 +1739,7 @@ export default function Tasks({ user }) {
           </div>
         </div>
       </div>)}
+    </>}
     </>
   )
 }

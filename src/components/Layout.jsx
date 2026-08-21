@@ -1,17 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 
 const allNavItems = [
   { path: '/', label: 'Dashboard', icon: '◉' },
   { path: '/tasks', label: "To-do's", icon: '☐' },
+  { path: '/content', label: 'Content', icon: '🎬' },
+  { path: '/production', label: 'Productie', icon: '🏭' },
+  { path: '/catalog', label: 'Catalogus', icon: '▣' },
   { path: '/inventory', label: 'Inkoop', icon: '▦' },
   { path: '/stock', label: 'Voorraad', icon: '🎨' },
   { path: '/orders', label: 'Orders', icon: '📦' },
-  { path: '/content', label: 'Content', icon: '▶' },
-  { path: '/catalog', label: 'Catalogus', icon: '▣' },
+  { path: '/designers', label: 'Designers', icon: '✎' },
   { path: '/analytics', label: 'Analytics', icon: '◐' },
+  { path: '/shopify', label: 'Shopify', icon: '🛒' },
   { path: '/maintenance', label: 'Onderhoud', icon: '🔧' },
+  { path: '/backup', label: 'Backup', icon: '💾' },
   { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
 
@@ -123,7 +127,7 @@ export default function Layout({ user, onLogout, children }) {
   const settings = JSON.parse(localStorage.getItem('artazest_settings') || '{}')
   const allPages = allNavItems.map(i => i.path)
   const savedPages = settings.roles?.[name]?.pages
-  const userPages = role === 'admin' ? allPages : (savedPages || ['/', '/tasks'])
+  const userPages = role === 'admin' ? allPages : (savedPages || allPages)
   const navItems = allNavItems.filter(item => userPages.includes(item.path))
   return (
     <div className="app-layout">
@@ -141,13 +145,16 @@ export default function Layout({ user, onLogout, children }) {
         <div className="sidebar-brand"><h2>Artazest</h2><span>Co-Pilot</span></div>
         <nav className="sidebar-nav">
           {navItems.map(item => (
-            <NavLink key={item.path} to={item.path} end={item.path==='/'}
+            <React.Fragment key={item.path}>
+            {item.divider&&<div style={{height:1,background:'rgba(255,255,255,0.08)',margin:'0.35rem 1rem'}}/>}
+            <NavLink to={item.path} end={item.path==='/'}
               className={({isActive}) => `sidebar-link ${isActive ? 'active' : ''}`}
               onClick={()=>setMobileOpen(false)}>
               <span style={{fontSize:'1.1rem'}}>{item.icon}</span>
               <span style={{flex:1}}>{item.label}</span>
               {badges[item.path]>0&&<span style={{minWidth:'20px',height:'20px',borderRadius:'50%',background:item.path==='/tasks'?'#DC2626':item.path==='/inventory'?'#D97706':item.path==='/maintenance'?'#DC2626':item.path==='/orders'?'#2563EB':item.path==='/catalog'?'#059669':item.path==='/development'?'#7C3AED':'#059669',color:'#fff',fontSize:'0.62rem',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1,padding:'0 4px'}}>{badges[item.path]>999?'999+':badges[item.path]}</span>}
             </NavLink>
+            </React.Fragment>
           ))}
         </nav>
         {/* Search + Dark mode */}

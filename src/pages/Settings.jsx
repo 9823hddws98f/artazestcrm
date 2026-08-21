@@ -14,7 +14,7 @@ const ALL_PAGES = [
   { path: '/analytics', label: 'Analytics', icon: '◐' },
   { path: '/settings', label: 'Instellingen', icon: '⚙' },
 ]
-const USERS = ['Tein', 'Sam', 'Productie']
+const USERS = ['Tein', 'Sam', 'Productie', 'Remy']
 
 export default function Settings({ user }) {
   const [settings, setSettings] = useState(null)
@@ -22,7 +22,8 @@ export default function Settings({ user }) {
   const [pwForms, setPwForms] = useState({
     Tein: { next: '', confirm: '' },
     Sam: { next: '', confirm: '' },
-    Productie: { next: '', confirm: '' }
+    Productie: { next: '', confirm: '' },
+    Remy: { next: '', confirm: '' }
   })
   const [pwMsgs, setPwMsgs] = useState({})
 
@@ -32,6 +33,7 @@ export default function Settings({ user }) {
         Tein: { role: 'admin', pages: ALL_PAGES.map(p => p.path) },
         Sam: { role: 'team', pages: ['/', '/tasks', '/content', '/catalog'] },
         Productie: { role: 'team', pages: ['/', '/tasks', '/inventory'] },
+        Remy: { role: 'team', pages: ALL_PAGES.map(p => p.path) },
       }
     }
     const data = localStorage.getItem('artazest_settings')
@@ -63,15 +65,25 @@ export default function Settings({ user }) {
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  const handlePwChange = (name) => {
+  // Wachtwoorden staan sinds de overstap naar Supabase Auth niet meer in de
+  // database, maar bij Supabase zelf (gehasht). Daardoor kan iedereen alleen
+  // nog zijn eigen wachtwoord wijzigen; dat van een ander resetten gaat via
+  // Supabase dashboard > Authentication > Users.
+  const handlePwChange = async (name) => {
+    if (name !== user?.name) {
+      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Alleen je eigen wachtwoord' } }); return
+    }
     const f = pwForms[name]
-    if (!f.next || f.next.length < 3) {
-      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Min. 3 tekens' } }); return
+    if (!f.next || f.next.length < 8) {
+      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Min. 8 tekens' } }); return
     }
     if (f.next !== f.confirm) {
       setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: 'Wachtwoorden komen niet overeen' } }); return
     }
-    auth.changePassword(name, f.next)
+    const res = await auth.changePassword(f.next)
+    if (res.error) {
+      setPwMsgs({ ...pwMsgs, [name]: { ok: false, text: res.error } }); return
+    }
     setPwMsgs({ ...pwMsgs, [name]: { ok: true, text: 'Opgeslagen ✓' } })
     setPwForms({ ...pwForms, [name]: { next: '', confirm: '' } })
     setTimeout(() => setPwMsgs(m => ({ ...m, [name]: null })), 3000)

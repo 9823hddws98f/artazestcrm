@@ -156,8 +156,9 @@ export default function Catalog() {
               <div style={{fontSize:'0.72rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                 {idx+1}. {a.name}</div>
               {a.format&&<div style={{fontSize:'0.65rem',color:'var(--text-secondary)',marginTop:'0.1rem'}}>{a.format}</div>}
-              <div style={{display:'flex',gap:'0.2rem',marginTop:'0.3rem'}}>
+              <div style={{display:'flex',gap:'0.2rem',marginTop:'0.3rem',alignItems:'center'}}>
                 {(a.kleuren||[]).map(k=>{const kl=KLEUREN.find(x=>x.key===k);return kl?<span key={k} style={{width:'11px',height:'11px',borderRadius:'50%',background:kl.hex,border:k==='White'?'1px solid var(--border)':'none'}} title={kl.label}/>:null})}
+                {!a.online&&<span style={{marginLeft:'auto',fontSize:'0.55rem',fontWeight:600,padding:'0.1rem 0.35rem',borderRadius:4,background:'#FEE2E2',color:'#DC2626',border:'1px solid #FECACA',whiteSpace:'nowrap'}}>niet actief</span>}
               </div>
             </div>
           </div>

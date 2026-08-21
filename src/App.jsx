@@ -6,16 +6,19 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import Inventory from './pages/Inventory'
-import Launch from './pages/Launch'
-import HealthMonitor from './pages/HealthMonitor'
 import Orders from './pages/Orders'
 import Stock from './pages/Stock'
-import Content from './pages/Content'
 import Catalog from './pages/Catalog'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import Maintenance from './pages/Maintenance'
 import Development from './pages/Development'
+import Production from './pages/Production'
+import Board from './pages/Board'
+import Content from './pages/Content'
+import Designers from './pages/Designers'
+import Backup from './pages/Backup'
+import Shopify from './pages/Shopify'
 
 const now = new Date().toISOString()
 const SEED_TASKS = [
@@ -70,26 +73,48 @@ const SEED_INVESTMENTS = [
 
 export default function App() {
   const [user, setUser] = useState(null)
+  const [checking, setChecking] = useState(true)
   const [loginName, setLoginName] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
+  // Sessie herstellen bij het opstarten. Supabase bewaart de sessie zelf, dus
+  // na een refresh hoeft er niet opnieuw ingelogd te worden.
   useEffect(() => {
-    auth.init()
-    // Seed Supabase als leeg
+    let active = true
+    auth.getUser().then(u => {
+      if (!active) return
+      setUser(u)
+      setChecking(false)
+    })
+    // Vangt ook uitloggen in een ander tabblad en een verlopen token op.
+    const stop = auth.onChange(u => { if (active) setUser(u) })
+    return () => { active = false; stop && stop() }
+  }, [])
+
+  // Seeden gebeurt pas na het inloggen: door RLS mag een niet-ingelogde
+  // bezoeker niets meer naar de database schrijven.
+  useEffect(() => {
+    if (!user) return
     api.seedIfEmpty('tasks', SEED_TASKS)
     api.seedIfEmpty('inventory', SEED_INVENTORY)
     api.seedIfEmpty('investments', SEED_INVESTMENTS)
-    const u = auth.getUser()
-    if (u) setUser(u)
-  }, [])
+  }, [user])
 
-  const handleLogin = () => {
-    const u = auth.login(loginName, pin)
-    if (u) { setUser(u); setError('') }
-    else setError('Onjuist wachtwoord')
+  const handleLogin = async () => {
+    if (!loginName) { setError('Kies eerst je naam'); return }
+    setBusy(true)
+    const { user: u, error: err } = await auth.login(loginName, pin)
+    setBusy(false)
+    if (u) { setUser(u); setError(''); setPin('') }
+    else setError(err || 'Onjuist wachtwoord')
   }
-  const handleLogout = () => { auth.logout(); setUser(null) }
+  const handleLogout = async () => { await auth.logout(); setUser(null) }
+
+  if (checking) {
+    return <div className="login-page"><div style={{textAlign:'center'}}><h1>Artazest</h1><p>Laden...</p></div></div>
+  }
 
   if (!user) {
     return (
@@ -108,7 +133,7 @@ export default function App() {
             onKeyDown={e=>e.key==='Enter'&&handleLogin()}
             style={{padding:'0.6rem',borderRadius:'6px',border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',fontSize:'1rem',textAlign:'center',letterSpacing:'0.3em'}}/>
           {error&&<div style={{color:'#f87171',fontSize:'0.8rem',textAlign:'center'}}>{error}</div>}
-          <button className="login-btn" onClick={handleLogin}>Inloggen</button>
+          <button className="login-btn" onClick={handleLogin} disabled={busy}>{busy ? 'Bezig...' : 'Inloggen'}</button>
         </div>
       </div>
     )
@@ -120,15 +145,18 @@ export default function App() {
         <Route path="/tasks" element={<Tasks user={user} />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/stock" element={<Stock />} />
-        <Route path="/launch" element={<Launch />} />
-        <Route path="/health" element={<HealthMonitor />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/content" element={<Content />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings user={user} />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/development" element={<Development />} />
+        <Route path="/production" element={<Production />} />
+        <Route path="/board" element={<Board />} />
+        <Route path="/content" element={<Content />} />
+        <Route path="/designers" element={<Designers />} />
+        <Route path="/backup" element={<Backup />} />
+        <Route path="/shopify" element={<Shopify />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>
